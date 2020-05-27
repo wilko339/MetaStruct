@@ -1,23 +1,17 @@
-import numexpr as ne
 import copy
 import cProfile
 import io
 import math
-import multiprocessing
 import os
 import pstats
 import time
-from math import inf
 
-import matplotlib.pyplot as plt
+import numexpr as ne
 import numpy as np
 import pymesh
 import skfmm
 import skimage
 import visvis as vv
-from matplotlib import cm, colors
-from matplotlib.widgets import RadioButtons, Slider
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from numpy import linalg as LA
 from profilehooks import profile
 from skimage import measure
