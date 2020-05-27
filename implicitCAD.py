@@ -1,0 +1,2087 @@
+import numexpr as ne
+import copy
+import cProfile
+import io
+import math
+import multiprocessing
+import os
+import pstats
+import time
+from math import inf
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pymesh
+import skfmm
+import skimage
+import visvis as vv
+from matplotlib import cm, colors
+from matplotlib.widgets import RadioButtons, Slider
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from numpy import linalg as LA
+from profilehooks import profile
+from skimage import measure
+from stl import mesh as msh
+from visvis.functions import gca, isosurface
+
+
+'''
+#### DISTANCE FIELD EVALULATIONS WITH FAST MARCHING ####
+
+dist = skfmm.distance(arr)
+
+dist_verts, dist_faces, dist_normals, dist_values = measure.marching_cubes_lewiner(
+    dist, level=0, spacing=(xStep, yStep, zStep), step_size=1, gradient_direction='ascent')
+
+dist_mesh = vv.mesh(dist_verts, dist_faces,
+                            dist_normals, dist_values)
+'''
+
+
+class DesignSpace:
+
+    def __init__(self, res=200, xBounds=[-2, 3], yBounds=[-2, 3], zBounds=[-2, 3]):
+
+        self.xBounds = xBounds
+        self.yBounds = yBounds
+        self.zBounds = zBounds
+
+        self.res = res
+
+        self.xLower = min(self.xBounds)
+        self.xUpper = max(self.xBounds)
+        self.yLower = min(self.yBounds)
+        self.yUpper = max(self.yBounds)
+        self.zLower = min(self.zBounds)
+        self.zUpper = max(self.zBounds)
+
+        offset = 0.1
+
+        X = np.linspace(self.xLower - offset, self.xUpper + offset, res)
+        Y = np.linspace(self.yLower - offset, self.yUpper + offset, res)
+        Z = np.linspace(self.zLower - offset, self.zUpper + offset, res)
+
+        self.xStep = (self.xUpper - self.xLower) / (res - 1)
+        self.yStep = (self.yUpper - self.yLower) / (res - 1)
+        self.zStep = (self.zUpper - self.zLower) / (res - 1)
+
+        print('Generating Sample Grid in Design Space')
+
+        self.YY, self.ZZ, self.XX = np.meshgrid(X, Y, Z)
+
+
+class Geometry:
+
+    def __init__(self, designSpace):
+
+        self.designSpace = designSpace
+
+        if self.designSpace == None:
+
+            raise ValueError('No specified design space.')
+
+        self.x = 0
+        self.y = 0
+        self.z = 0
+
+        self.transform = None
+
+        # self.xLims = self.yLims = self.zLims = [0, 0]
+
+        self.mesh = []
+
+        self.XX = self.designSpace.XX
+        self.YY = self.designSpace.YY
+        self.ZZ = self.designSpace.ZZ
+
+        self.xStep = self.designSpace.xStep
+        self.yStep = self.designSpace.yStep
+        self.zStep = self.designSpace.zStep
+
+        self.res = self.designSpace.res
+
+    def compareLims(self):
+
+        if min(self.xLims) < self.designSpace.xLower or max(self.xLims) > self.designSpace.xUpper:
+
+            print(
+                '\n------------------------------------------------------------------\n')
+
+            print('Warning: Design Space does not fully enclose shape in x dimension.\n')
+
+            print('------------------------------------------------------------------\n')
+
+        if min(self.yLims) < self.designSpace.yLower or max(self.yLims) > self.designSpace.yUpper:
+
+            print(
+                '\n------------------------------------------------------------------\n')
+
+            print('Warning: Design Space does not fully enclose shape in y dimension.\n')
+
+            print('------------------------------------------------------------------\n')
+
+        if min(self.zLims) < self.designSpace.zLower or max(self.zLims) > self.designSpace.zUpper:
+
+            print(
+                '\n------------------------------------------------------------------\n')
+
+            print('Warning: Design Space does not fully enclose shape in z dimension.\n')
+
+            print('------------------------------------------------------------------\n')
+
+        print(self.zLims)
+        print(self.designSpace.zUpper, self.designSpace.zLower)
+
+    def setLims(self):
+
+        pass
+
+    def evaluatePoint(self, x, y, z):
+
+        pass
+
+    def evaluateDistance(self, x, y, z):
+        '''
+        arr = self.evaluatePoint(x, y, z)
+
+        sign = np.sign(arr)
+
+        return np.sqrt(np.absolute(self.evaluatePoint(x, y, z))) * sign
+        '''
+
+        val = self.evaluatePoint(x, y, z)
+
+        grad = self.pointGradient(x, y, z)
+
+        length = LA.norm(grad)
+
+        return val / length
+
+    def pointGradient(self, x, y, z):
+
+        delta = 0.01
+
+        X = np.linspace(x-delta, x+delta, 3)
+        Y = np.linspace(y-delta, y+delta, 3)
+        Z = np.linspace(z-delta, z+delta, 3)
+
+        X, Y, Z = np.meshgrid(X, Y, Z)
+
+        sample = self.evaluatePoint(X, Y, Z)
+
+        return np.gradient(sample, delta, edge_order=2)
+
+    def plot(self, res=500, out='v', style='s'):
+
+        zRes = math.ceil(res / 2)
+
+        # zRes = 5
+
+        calcs = res**2 * zRes
+
+        print(f'Performing {calcs} calculations...')
+        print('\n------------------------------------\n')
+
+        t1 = time.time()
+        '''
+        if out == 'd' and style == 's':
+
+            print('Cannot display surface (s) on distance plot.')
+            print('Will display as field (f).')
+            style = 'f'
+        '''
+
+        offset = 1
+
+        X = np.linspace(self.xLims[0] - offset, self.xLims[1] + offset, res)
+        Y = np.linspace(self.yLims[0] - offset, self.yLims[1] + offset, res)
+        Z = np.linspace(self.zLims[0], self.zLims[1], zRes)
+
+        step = (self.zLims[1] - self.zLims[0])/(zRes-1)
+
+        midZ = Z[math.ceil(len(Z)/2)]
+
+        X, Y = np.meshgrid(X, Y)
+
+        arrays = []
+
+        if out == 'v':
+
+            for z in Z:
+
+                array = self.evaluatePoint(X, Y, z)
+
+                arrays.append(array)
+
+        if out == 'd':
+
+            dx = float(step)
+
+            for z in Z:
+
+                vals = self.evaluatePoint(X, Y, z)
+
+                grad_eval = np.gradient(vals, dx, edge_order=2)
+
+                length = LA.norm(grad_eval)
+
+                array = vals / length
+
+                # array = (self.evaluateDistance(X, Y, z))
+                '''
+                try:
+                    array = skfmm.distance(array, dx=dx)
+                except:
+                    print('No Zero contour detected, skipping value.')
+                    pass
+                '''
+                arrays.append(array)
+
+        t1 = time.time_ns()
+
+        array_dict = dict(zip(Z, arrays))
+
+        t2 = time.time_ns()
+
+        calculation_time = t2 - t1
+
+        average_calc_time = calculation_time / calcs
+
+        print(f'Total Calculation Time: {calculation_time}ns')
+
+        print(
+            f'Average Time per Calculation: {format(average_calc_time, ".2f")}ns')
+
+        if style == 'f':
+
+            levels = 100
+
+        if style == 's':
+
+            levels = [0, 0.1, 0.2]
+
+        fig, ax = plt.subplots(1, 1)
+        plt.subplots_adjust(left=0.25, bottom=0.25)
+
+        im = ax.contour(
+            X, Y, array_dict[midZ], levels=levels, cmap=cm.jet, vmin=0, vmax=1)
+
+        t2 = time.time_ns()
+
+        print(f'Plot Created in: {(t2 - t1)}ns')
+        print('\n------------------------------------\n')
+
+        plt.title('Shape Field')
+
+        ax.set(xlabel='X', ylabel='Y')
+
+        contourAxis = plt.gca()
+
+        axX = plt.axes([0.25, 0.1, 0.65, 0.03])
+
+        zSlider = Slider(axX, 'Z Value', min(self.zLims), max(
+            self.zLims), valinit=midZ, valstep=step)
+
+        def changeZ(val):
+
+            zVal = zSlider.val
+            contourAxis.clear()
+            if zSlider.val != self.zLims[0] or self.zLims[1]:
+                contourAxis.contour(X, Y, array_dict[zVal],
+                                    levels=levels, cmap=cm.jet, vmin=0, vmax=1)
+            ax.set(xlabel='X', ylabel='Y')
+
+            plt.draw()
+
+        zSlider.on_changed(changeZ)
+
+        fig.colorbar(im, ax=ax)
+
+        plt.show()
+
+    def translate(self, x, y, z):
+
+        self.x += x
+        self.y += y
+        self.z += z
+        self.setLims()
+
+    def rotateAxis(self, ax='x', theta=45.):
+
+        self.rotationAxis = ax
+        theta = theta
+        rads = theta * (math.pi/180)
+
+        if ax == 'x':
+
+            self.transform[:, 0] = [1, 0, 0]
+            self.transform[:, 1] = [0, math.cos(
+                rads), -math.sin(rads)]
+            self.transform[:, 2] = [0, math.sin(
+                rads), math.cos(rads)]
+
+        if ax == 'y':
+
+            self.transform[:, 0] = [math.cos(
+                rads), 0, math.sin(rads)]
+            self.transform[:, 1] = [0, 1, 0]
+            self.transform[:, 2] = [-math.sin(
+                rads), 0, math.cos(rads)]
+
+        if ax == 'z':
+
+            self.transform[:, 0] = [math.cos(
+                rads), -math.sin(rads), 0]
+            self.transform[:, 1] = [math.sin(
+                rads), math.cos(rads), 0]
+            self.transform[:, 2] = [0, 0, 1]
+
+    def rotateCustomAxis(self, ax=[1, 1, 1], theta=45.):
+
+        l = ax[0]
+        m = ax[1]
+        n = ax[2]
+        theta = theta
+        rads = theta * (math.pi/180)
+        var = 1 - math.cos(theta)
+
+        self.transform = [[l*l*var + math.cos(theta), m*l*var - n*math.sin(theta), n*l*var + m*math.sin(theta)],
+                          [l*m*var + n*math.sin(theta), m*m*var +
+                           math.cos(theta), n*m*var - l*math.sin(theta)],
+                          [l*n*var - m*math.sin(theta), m*n*var + l *
+                           math.sin(theta), n*n*var + math.cos(theta)]
+                          ]
+
+    def transformInputs(self, x, y, z):
+
+        coords = np.array([x, y, z])
+
+        coords = np.dot(coords.T, self.transform).T
+
+        x = coords[0]
+        y = coords[1]
+        z = coords[2]
+
+        return x, y, z
+
+    def generateSampleGrid(self):
+
+        res = self.designSpace.res
+
+        self.xLower = min(self.xLims)
+        self.xUpper = max(self.xLims)
+        self.yLower = min(self.yLims)
+        self.yUpper = max(self.yLims)
+        self.zLower = min(self.zLims)
+        self.zUpper = max(self.zLims)
+
+        offset = 0.1
+
+        X = np.linspace(self.xLower - offset, self.xUpper + offset, res)
+        Y = np.linspace(self.yLower - offset, self.yUpper + offset, res)
+        Z = np.linspace(self.zLower - offset, self.zUpper + offset, res)
+
+        self.xStep = (self.xUpper - self.xLower) / (res - 1)
+        self.yStep = (self.yUpper - self.yLower) / (res - 1)
+        self.zStep = (self.zUpper - self.zLower) / (res - 1)
+
+        self.ZZ, self.YY, self.XX = np.meshgrid(X, Y, Z)
+
+    def evaluateGrid(self):
+
+        print(f'Evaluating grid points for {self.name}...')
+
+        self.evaluatedGrid = self.evaluatePoint(self.XX, self.YY, self.ZZ)
+
+    def findSurface(self, level=0):
+
+        print(f'Extracting Isosurface (level = {level})...')
+
+        try:
+
+            self.verts, self.faces, self.normals, self.values = measure.marching_cubes(self.evaluatedGrid, level=level, spacing=(
+                self.xStep, self.yStep, self.zStep), allow_degenerate=False)
+
+            self.verts = np.fliplr(self.verts)
+
+        except:
+
+            raise ValueError(
+                f'No isosurface found at specified level ({level})')
+
+    def previewModel(self, clip=None, clipVal=0, flipClip=False):
+
+        self.compareLims()
+
+        if not hasattr(self, 'evaluatedGrid'):
+
+            self.evaluateGrid()
+
+        if clip != None:
+
+            if clip == 'x':
+
+                if flipClip == False:
+
+                    self.evaluatedGrid = np.maximum(
+                        self.evaluatedGrid, self.XX - clipVal)
+
+                if flipClip == True:
+
+                    self.evaluatedGrid = np.maximum(
+                        self.evaluatedGrid, clipVal - self.XX)
+
+            if clip == 'y':
+
+                if flipClip == False:
+
+                    self.evaluatedGrid = np.maximum(
+                        self.evaluatedGrid, self.ZZ - clipVal)
+
+                if flipClip == True:
+
+                    self.evaluatedGrid = np.maximum(
+                        self.evaluatedGrid, clipVal - self.ZZ)
+
+            if clip == 'z':
+
+                if flipClip == False:
+
+                    self.evaluatedGrid = np.maximum(
+                        self.evaluatedGrid, self.YY - clipVal)
+
+                if flipClip == True:
+
+                    self.evaluatedGrid = np.maximum(
+                        self.evaluatedGrid, clipVal - self.YY)
+
+        self.findSurface()
+
+        vv.figure(1)
+
+        shapeMesh = vv.mesh(self.verts, faces=self.faces, normals=self.normals)
+
+        '''
+        minXlabel = math.floor(self.xLower)
+        maxXlabel = math.ceil(self.xUpper)
+        minYlabel = math.floor(self.yLower)
+        maxYlabel = math.ceil(self.yUpper)
+        minZlabel = math.floor(self.zLower)
+        maxZlabel = math.ceil(self.zUpper)
+
+        numX = maxXlabel - minXlabel + 1
+        numY = maxYlabel - minYlabel + 1
+        numZ = maxZlabel - minZlabel + 1
+
+        xlabels = np.linspace(minXlabel, maxXlabel, numX)
+        ylabels = np.linspace(minYlabel, maxYlabel, numY)
+        zlabels = np.linspace(minZlabel, maxZlabel, numZ)
+        '''
+
+        a = vv.gca()
+        # a.axis.xTicks = xlabels
+        a.axis.xLabel = 'x'
+        # a.axis.yTicks = ylabels
+        a.axis.yLabel = 'y'
+        # a.axis.zTicks = zlabels
+        a.axis.zLabel = 'z'
+
+        a.bgcolor = 'w'
+        a.axis.axisColor = 'k'
+
+        vv.use().Run()
+
+    def meshClean(self, mesh):
+
+        out_mesh = mesh
+
+        print('Detecting Self Intersections...')
+
+        self_intersections = pymesh.detect_self_intersection(out_mesh).shape[0]
+
+        if self_intersections > 0:
+
+            print(f'{self_intersections} detected, fixing...')
+
+            out_mesh = pymesh.resolve_self_intersection(out_mesh)
+
+            self_intersections = pymesh.detect_self_intersection(
+                out_mesh).shape[0]
+
+            print(f'{self_intersections} self intersections remaining in mesh.')
+
+        out_mesh, info = pymesh.remove_isolated_vertices(out_mesh)
+
+        verts_removed = info['num_vertex_removed']
+
+        print(f'{verts_removed} isolated vertices removed...')
+
+        print('Detecting Duplicate Vertices...')
+
+        out_mesh, info = pymesh.remove_duplicated_vertices(out_mesh)
+
+        merged_vertices = info['num_vertex_merged']
+
+        print(f'{merged_vertices} merged vertices removed...')
+
+        print('Detecting short edges...')
+
+        out_mesh, info = pymesh.collapse_short_edges(out_mesh)
+
+        collapsed_edges = info['num_edge_collapsed']
+
+        print(f'{collapsed_edges} short edged collapsed...')
+
+        print('Removing Duplicate Faces...')
+
+        out_mesh, info = pymesh.remove_duplicated_faces(out_mesh)
+
+        print('Removing obtuse triangles...')
+
+        out_mesh, info = pymesh.remove_obtuse_triangles(out_mesh)
+
+        split_tris = info['num_triangle_split']
+
+        print(f'{split_tris} triangles split...')
+
+        print('Removing degenerate triangles...')
+
+        out_mesh, info = pymesh.remove_degenerated_triangles(out_mesh)
+
+        return out_mesh
+
+    def fix_mesh(self, mesh, detail="normal"):
+        bbox_min, bbox_max = mesh.bbox
+        diag_len = LA.norm(bbox_max - bbox_min)
+        if detail == "normal":
+            target_len = diag_len * 5e-3
+        elif detail == "high":
+            target_len = diag_len * 2.5e-3
+        elif detail == "low":
+            target_len = diag_len * 2e-2
+        print("Target resolution: {} mm".format(target_len))
+
+        count = 0
+        mesh, __ = pymesh.remove_degenerated_triangles(mesh, 100)
+        mesh, __ = pymesh.split_long_edges(mesh, target_len)
+        num_vertices = mesh.num_vertices
+        while True:
+            mesh, __ = pymesh.collapse_short_edges(mesh, 1e-6)
+            mesh, __ = pymesh.collapse_short_edges(mesh, target_len,
+                                                   preserve_feature=True)
+            mesh, __ = pymesh.remove_obtuse_triangles(mesh, 150.0, 100)
+            if mesh.num_vertices == num_vertices:
+                break
+
+            num_vertices = mesh.num_vertices
+            print("Number of Vertices: {}".format(num_vertices))
+            count += 1
+            if count > 10:
+                break
+
+        mesh = pymesh.resolve_self_intersection(mesh)
+        mesh, __ = pymesh.remove_duplicated_faces(mesh)
+        mesh = pymesh.compute_outer_hull(mesh)
+        mesh, __ = pymesh.remove_duplicated_faces(mesh)
+        mesh, __ = pymesh.remove_obtuse_triangles(mesh, 179.0, 5)
+        mesh, __ = pymesh.remove_isolated_vertices(mesh)
+
+        return mesh
+
+    def saveMesh(self, filename=None, fileFormat='obj'):
+
+        res = self.designSpace.res
+
+        formats = {'obj': '.obj',
+                   'stl': '.stl',
+                   '.stl': '.stl',
+                   '.obj': '.obj'}
+
+        if fileFormat not in formats:
+
+            raise ValueError(f'"{fileFormat}" is not a supported file format.')
+
+        if filename == None:
+
+            self.filename = self.name + formats[fileFormat]
+
+        if filename is not None:
+
+            self.filename = filename + formats[fileFormat]
+
+        if not hasattr(self, 'evaluatedGrid'):
+
+            print('Evaluating Sample Points...')
+
+            arr = self.evaluateGrid()
+
+        print('Executing Marching Cubes Algorithm...')
+
+        self.findSurface()
+
+        print('Generating Mesh...')
+
+        self.mesh = pymesh.meshio.form_mesh(self.verts, self.faces)
+
+        self.mesh = self.fix_mesh(self.mesh)
+
+        # out_mesh = pymesh.tetrahedralize(out_mesh, 0.01)
+
+        print(f'Exporting "{self.filename}" mesh file...\n')
+
+        pymesh.save_mesh(self.filename, self.mesh, ascii=True)
+
+        try:
+            f = open(filename)
+            f.close()
+        except:
+            FileNotFoundError(f'Cannot find "{self.filename}" in folder.')
+
+        print(f'"{self.filename}" successfully exported.\n')
+        # print(f'"{filename}" has {num_triangles} total triangles.')
+
+    def wireLattice(self):
+
+        pass
+
+
+class Shape(Geometry):
+
+    morph = 'Shape'
+
+    def __init__(self, designSpace, x=0, y=0, z=0):
+
+        self.designSpace = designSpace
+
+        super().__init__(self.designSpace)
+
+        self.name = 'Blank'
+
+        self.x = self.paramCheck(x)
+        self.y = self.paramCheck(y)
+        self.z = self.paramCheck(z)
+
+        self.transform = np.identity(3)
+
+        self.XX = self.designSpace.XX
+        self.YY = self.designSpace.YY
+        self.ZZ = self.designSpace.ZZ
+
+    def setLims(self):
+
+        self.xLims = self.yLims = self.zLims = [0, 0]
+
+    def __repr__(self):
+
+        return f'{self.__class__.__name__}({self.x}, {self.y}, {self.z})'
+
+    def __str__(self):
+
+        return f'{self.name} {self.morph}\nCentre(x, y, z): ({self.x}, {self.y}, {self.z})'
+
+    def __add__(self, other):
+
+        return Union(self, other)
+
+    def __sub__(self, other):
+
+        return Difference(self, other)
+
+    def __truediv__(self, other):
+
+        return Intersection(self, other)
+
+    def __mul__(self, other):
+
+        return Multiply(self, other)
+
+    def paramCheck(self, n):
+
+        try:
+
+            float(n)
+            return n
+
+        except:
+            raise ValueError(f'{n} != a number.')
+
+    def evaluatePoint(self, x, y, z):
+        pass
+
+
+class Line(Shape):
+
+    def __init__(self, x1, y1, z1, x2, y2, z2):
+
+        self.p1 = np.array(([x1, y1, z1]))
+        self.p2 = np.array(([x2, y2, z2]))
+        self.l = LA.norm(self.p1 - self.p2)
+        self.dir = self.p2 - self.p1
+
+    def evaluatePoint(self, x, y, z):
+
+        NotImplemented
+
+    def evaluateDistance(self, x, y, z):
+
+        NotImplemented
+
+
+class Spheroid(Shape):
+
+    def __init__(self, x=0, y=0, z=0, xr=1, yr=2, zr=1, designSpace=DesignSpace):
+        super().__init__(x, y, z, designSpace)
+
+        self.name = 'Spheroid'
+
+        self.xr = self.paramCheck(xr)
+        self.yr = self.paramCheck(yr)
+        self.zr = self.paramCheck(zr)
+
+        self.xLims = np.array(
+            [self.x - self.xr, self.x + self.xr])
+        self.yLims = np.array(
+            [self.y - self.yr, self.y + self.yr])
+        self.zLims = np.array(
+            [self.z - self.zr, self.z + self.zr])
+
+    def __repr__(self):
+
+        return f'{self.__class__.__name__}({self.x}, {self.y}, {self.z}, {self.xr}, {self.yr}, {self.zr})'
+
+    def __str__(self):
+
+        return super().__str__() + f'\nRadii(xr, yr, zr): ({self.xr}, {self.yr}, {self.zr})'
+
+    def evaluatePoint(self, x, y, z):
+
+        if self.transform is not None:
+
+            x, y, z = self.transformInputs(x, y, z)
+
+        x0 = self.x
+        y0 = self.y
+        z0 = self.y
+        xr = self.xr
+        yr = self.yr
+        zr = self.zr
+
+        expr = '((x-x0)**2)/(xr**2) + ((y-y0)**2)/(yr**2) + ((z-z0)**2)/(zr**2) - 1'
+
+        return ne.evaluate(expr)
+        '''
+        return ((np.square(x - self.x) / (self.xr)**2 +
+                 np.square(y - self.y) / (self.yr)**2 +
+                 np.square(z - self.z) / (self.zr)**2)) - 1
+        '''
+
+
+class Sphere(Shape):
+
+    def __init__(self, designSpace, x=0, y=0, z=0, r=1):
+        super().__init__(designSpace, x, y, z)
+
+        self.name = 'Sphere'
+
+        self.r = self.paramCheck(r)
+
+        self.setLims()
+        # self.compareLims()
+
+    def setLims(self):
+
+        self.xLims = np.array(
+            [self.x - self.r, self.x + self.r])
+        self.yLims = np.array(
+            [self.y - self.r, self.y + self.r])
+        self.zLims = np.array(
+            [self.z - self.r, self.z + self.r])
+
+    def __repr__(self):
+
+        return f'Sphere({self.x}, {self.y}, {self.z}, {self.r})'
+
+    def evaluatePoint(self, x, y, z):
+
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+        r = self.r
+
+        expr = '(x-x0)**2 + (y-y0)**2 + (z-z0)**2 - r**2'
+
+        arr = ne.evaluate(expr)
+
+        return arr
+
+        '''
+        return np.square(x - self.x) + np.square(y - self.y) + \
+            np.square(z - self.z) - (self.r)** 2
+        '''
+
+    def evaluateDistance(self, x, y, z):
+
+        return np.sqrt(np.square(x-self.x) + np.square(y-self.y) + np.square(z-self.z)) - self.r
+
+
+class HollowSphere(Shape):
+
+    def __init__(self, designSpace, x=0, y=0, z=0, r=1, t=0.3):
+
+        self.designSpace = designSpace
+
+        super().__init__(self.designSpace, x, y, z)
+
+        self.name = 'Hollow Sphere'
+
+        self.r = self.paramCheck(r)
+        self.t = self.paramCheck(t)
+        self.setLims()
+
+    def setLims(self):
+
+        self.xLims = np.array(
+            [self.x - self.r, self.x + self.r])
+        self.yLims = np.array(
+            [self.y - self.r, self.y + self.r])
+        self.zLims = np.array(
+            [self.z - self.r, self.z + self.r])
+
+    def __repr__(self):
+
+        return f'{self.__class__.__name__}({self.x}, {self.y}, {self.z}, {self.r}, {self.t})'
+
+    def __str__(self):
+
+        return super().__str__() + f'\nRadius: {self.r}\nWall Thickness: {self.t}'
+
+    def evaluatePoint(self, x, y, z):
+
+        ball = Sphere(self.designSpace, self.x, self.y, self.z, self.r) - \
+            Sphere(self.designSpace, self.x, self.y, self.z, self.r -
+                   self.t)
+
+        return ball.evaluatePoint(x, y, z)
+
+
+class Cube(Shape):
+
+    def __init__(self, designSpace, x=0, y=0, z=0, dim=1):
+        super().__init__(designSpace, x, y, z)
+
+        self.name = 'Cube'
+
+        self.dim = self.paramCheck(dim)
+
+        self.setLims()
+
+    def setLims(self):
+
+        self.xLims = np.array(
+            [self.x - self.dim, self.x + self.dim])
+        self.yLims = np.array(
+            [self.y - self.dim, self.y + self.dim])
+        self.zLims = np.array(
+            [self.z - self.dim, self.z + self.dim])
+
+    def __repr__(self):
+
+        return f'{self.__class__.__name__}({self.x}, {self.y}, {self.z}, {self.dim})'
+
+    def __str__(self):
+
+        return super().__str__() + f'\nCube Radius: {self.dim}'
+
+    def evaluatePoint(self, x, y, z):
+
+        if self.transform is not None:
+
+            x, y, z = self.transformInputs(x, y, z)
+
+        ### Numexpr does not support elementwise min / max, so will stick with NumPy for now... :( ###
+
+        arr = [np.square(x - self.x) - (self.dim)**2, np.square(y - self.y) - (self.dim)**2,
+               np.square(z - self.z) - (self.dim)**2]
+
+        return np.maximum(np.maximum(arr[0], arr[1]), arr[2])
+
+    def evaluateDistance(self, x, y, z):
+
+        # p = np.array(([x, y, z]))
+
+        xmax = max(self.xLims)
+        ymax = max(self.yLims)
+        zmax = max(self.zLims)
+
+        shape = np.shape(x)
+
+        xmax = np.full(shape, xmax)
+        ymax = np.full(shape, ymax)
+        zmax = np.full(shape, zmax)
+
+        b = np.array(([xmax, ymax, zmax]))
+
+        q = np.absolute([x, y, z]) - b
+
+        return LA.norm(np.maximum(q, 0)) + \
+            np.minimum(np.maximum(q[0], np.maximum(q[1], q[2])), 0)
+
+
+class HollowCube(Shape):
+
+    def __init__(self, x=0, y=0, z=0, dim=1, t=0.3):
+        super().__init__(x, y, z, designSpace)
+
+        self.name = 'Hollow Cube'
+
+        self.dim = self.paramCheck(dim)
+        self.t = self.paramCheck(t)
+        self.setLims()
+
+    def setLims(self):
+
+        self.xLims = np.array(
+            [self.x - self.dim, self.x + self.dim])
+        self.yLims = np.array(
+            [self.y - self.dim, self.y + self.dim])
+        self.zLims = np.array(
+            [self.z - self.dim, self.z + self.dim])
+
+    def __repr__(self):
+
+        return f'{self.__class__.__name__}({self.x}, {self.y}, {self.z}, {self.dim}, {self.t})'
+
+    def __str__(self):
+
+        return super().__str__() + f'\nCube Radius: {self.dim}\nWall Thickness: {self.t}'
+
+    def evaluatePoint(self, x, y, z):
+
+        box = Cube(self.x, self.y, self.z, self.dim) - \
+            Cube(self.x, self.y, self.z, self.dim - self.t)
+
+        return box.evaluatePoint(x, y, z)
+
+
+class Torus(Shape):
+
+    def __init__(self, x=0, y=0, z=0, r1=1, r2=0.5):
+
+        self.x = x
+        self.y = y
+        self.z = z
+        self.r1 = r1
+        self.r2 = r2
+
+        self.setLims()
+
+    def setLims(self):
+
+        self.xLims = np.array(
+            [self.x - self.r1 - self.r2, self.x + self.r1 + self.r2])
+        self.yLims = np.array(
+            [self.y - self.r1 - self.r2, self.y + self.r1 + self.r2])
+        self.zLims = np.array(
+            [self.z - self.r2, self.z + self.r2])
+
+    def evaluatePoint(self, x, y, z):
+
+        return np.square(np.sqrt(np.square(x) + np.square(y)) - self.r1) + \
+            np.square(z) - self.r2**2
+
+
+class Cuboid(Shape):
+
+    def __init__(self, x=0, y=0, z=0, xd=1, yd=1.5, zd=1):
+        super().__init__(x, y, z, designSpace)
+
+        self.name = 'Cuboid'
+
+        self.xd = self.paramCheck(xd)
+        self.yd = self.paramCheck(yd)
+        self.zd = self.paramCheck(zd)
+
+        self.xLims = np.array(
+            [self.x - self.xd, self.x + self.xd])
+        self.yLims = np.array(
+            [self.y - self.yd, self.y + self.yd])
+        self.zLims = np.array(
+            [self.z - self.zd, self.z + self.zd])
+
+    def __repr__(self):
+
+        return f'{self.__class__.__name__}({self.x}, {self.y}, {self.z}, {self.xd}, {self.yd}, {self.zd})'
+
+    def __str__(self):
+
+        return super().__str__() + f'\nDimensions(x, y, z): ({self.xd}, {self.yd}, {self.zd})'
+
+    def evaluatePoint(self, x, y, z):
+
+        arr = [np.square(x - self.x) - (self.xd)**2, np.square(y - self.y) -
+               (self.yd)**2, np.square(z - self.z) - (self.zd)**2]
+
+        return np.maximum(arr[0], arr[1])
+
+    def evaluateDistance(self, x, y, z):
+
+        p = np.array(([x, y, z]))
+
+        xmax = max(self.xLims)
+        ymax = max(self.yLims)
+        zmax = max(self.zLims)
+
+        b = np.array(([xmax, ymax, zmax]))
+
+        q = np.absolute(p) - b
+
+        return LA.norm(np.maximum(q, 0)) + \
+            np.minimum(np.maximum(q[0], np.maximum(q[1], q[2])), 0)
+
+
+class Cylinder(Shape):
+
+    def __init__(self, x=0, y=0, z=0, r1=1, r2=1, l=1, ax='z'):
+        super().__init__(x, y, z, designSpace)
+
+        self.name = 'Cylinder'
+
+        self.r1 = self.paramCheck(r1)
+        self.r2 = self.paramCheck(r2)
+        self.l = self.paramCheck(l)
+        self.ax = ax
+
+        if self.ax == 'z':
+
+            self.xLims = np.array(
+                [self.x - self.r1, self.x + self.r1])
+            self.yLims = np.array(
+                [self.y - self.r2, self.y + self.r2])
+            self.zLims = np.array(
+                [self.z - self.l, self.z + self.l])
+
+        if self.ax == 'x':
+
+            self.xLims = np.array(
+                [self.x - self.l, self.x + self.l])
+            self.yLims = np.array(
+                [self.y - self.r1, self.y + self.r1])
+            self.zLims = np.array(
+                [self.z - self.r2, self.z + self.r2])
+
+        if self.ax == 'y':
+
+            self.xLims = np.array(
+                [self.x - self.r1, self.x + self.r1])
+            self.yLims = np.array(
+                [self.y - self.l, self.y + self.l])
+            self.zLims = np.array(
+                [self.z - self.r2, self.z + self.r2])
+
+    def __repr__(self):
+
+        return f'{self.__class__.__name__}({self.x}, {self.y}, {self.z}, {self.r1}, {self.r2}, {self.l}, {self.ax})'
+
+    def __str__(self):
+
+        string = super().__str__() + \
+            f'\nAxis: {self.ax}' + \
+            f'\nLength: {self.l}'
+
+        if self.ax == 'z':
+
+            return string + f'\nRadii(x, y): ({self.r1}, {self.r2})'
+
+        if self.ax == 'x':
+
+            return string + f'\nRadii(y, z): ({self.r1}, {self.r2})'
+
+        if self.ax == 'y':
+
+            return string + f'\nRadii(x, z): ({self.r1}, {self.r2})'
+
+    def evaluatePoint(self, x, y, z):
+
+        if self.ax == 'z':
+
+            arr = [np.square(x - self.x)/self.r1**2 + np.square(y - self.y) /
+                   self.r2**2 - 1, np.square(z - self.z) - self.l**2]
+
+            return np.maximum(arr[0], arr[1])
+
+        if self.ax == 'x':
+
+            arr = [np.square(y - self.y)/self.r1**2 + np.square(z - self.z) /
+                   self.r2**2 - 1, np.square(x - self.x) - self.l**2]
+
+            return np.maximum(arr[0], arr[1])
+
+        if self.ax == 'y':
+
+            arr = [np.square(x - self.x)/self.r1**2 + np.square(z - self.z) /
+                   self.r2**2 - 1, np.square(y - self.y) - self.l**2]
+
+            return np.maximum(arr[0], arr[1])
+
+    # def evaluateDistance(self, x, y, z):
+
+        # if self.ax == 'z':
+
+            # return np.maximum(np.square(x) + np.square(y) - self.r)
+
+
+class Boolean(Geometry):
+
+    def __init__(self, shape1, shape2):
+
+        if shape1.designSpace.XX is not shape2.designSpace.XX:
+            if shape1.designSpace.YY is not shape2.designSpace.YY:
+                if shape1.designSpace.ZZ is not shape2.designSpace.ZZ:
+                    raise ValueError(
+                        f'{shape1.name} and {shape2.name} are defined in different design spaces.')
+
+        self.designSpace = shape1.designSpace
+
+        self.XX = self.designSpace.XX
+        self.YY = self.designSpace.YY
+        self.ZZ = self.designSpace.ZZ
+
+        self.xStep = self.designSpace.xStep
+        self.yStep = self.designSpace.yStep
+        self.zStep = self.designSpace.zStep
+
+        if shape1.morph == 'Lattice' and shape2.morph != 'Lattice':
+
+            raise TypeError('Please enter Lattice Object as 2nd Argument.')
+
+        self.morph = 'Shape'
+
+        self.transform = np.eye(3)
+
+        self.shape1 = shape1
+        self.shape2 = shape2
+        self.shapes = [shape1, shape2]
+        self.setLims()
+
+        self.x = (shape1.x + shape2.x) / 2
+        self.y = (shape1.z + shape2.y) / 2
+        self.z = (shape1.x + shape2.z) / 2
+
+        self.name = shape1.name + '_' + shape2.name
+
+        for shape in self.shapes:
+
+            if not hasattr(shape, 'evaluatedGrid'):
+
+                shape.evaluateGrid()
+
+    def setLims(self):
+
+        self.xLims = [0., 0.]
+        self.yLims = [0., 0.]
+        self.zLims = [0., 0.]
+
+        self.shapesXmins = []
+        self.shapesXmaxs = []
+        self.shapesYmins = []
+        self.shapesYmaxs = []
+        self.shapesZmins = []
+        self.shapesZmaxs = []
+
+        if self.shape2.morph != 'Lattice':
+
+            for shape in self.shapes:
+
+                self.shapesXmins.append(shape.xLims[0])
+                self.shapesXmaxs.append(shape.xLims[1])
+                self.shapesYmins.append(shape.yLims[0])
+                self.shapesYmaxs.append(shape.yLims[1])
+                self.shapesZmins.append(shape.zLims[0])
+                self.shapesZmaxs.append(shape.zLims[1])
+
+            self.xLims[0] = min(self.shapesXmins)
+            self.xLims[1] = max(self.shapesXmaxs)
+            self.yLims[0] = min(self.shapesYmins)
+            self.yLims[1] = max(self.shapesYmaxs)
+            self.zLims[0] = min(self.shapesZmins)
+            self.zLims[1] = max(self.shapesZmaxs)
+
+        if self.shape2.morph == 'Lattice':
+
+            self.morph == 'Lattice'
+
+            self.xLims = self.shape1.xLims
+            self.yLims = self.shape1.yLims
+            self.zLims = self.shape1.zLims
+
+    def __repr__(self):
+
+        return f'{self.__class__.__name__}({repr(self.shape1)}, {repr(self.shape2)})'
+
+    def __add__(self, other):
+
+        return Union(self, other)
+
+    def __sub__(self, other):
+
+        return Difference(self, other)
+
+    def __truediv__(self, other):
+
+        return Intersection(self, other)
+
+    def evaluatePoint(self):
+        pass
+
+    def translate(self, x, y, z):
+
+        for shape in self.shapes:
+
+            shape.translate(x, y, z)
+
+        self.setLims()
+
+
+class Union(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+
+    # @profile(immediate=True)
+    def evaluatePoint(self, x, y, z):
+
+        return np.minimum(self.shape1.evaluatedGrid, self.shape2.evaluatedGrid)
+
+
+class SmoothUnion(Boolean):
+
+    def __init__(self, shape1, shape2, blend=1):
+        super().__init__(shape1, shape2)
+
+        self.blend = blend
+
+    def evaluatePoint(self, x, y, z):
+
+        res = np.exp(-self.blend * self.shape1.evaluatedGrid) + \
+            np.exp(-self.blend * self.shape2.evaluatedGrid)
+
+        return -np.log(np.maximum(0.0001, res)) / self.blend
+
+
+class Intersection(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+
+    def evaluatePoint(self, x, y, z):
+
+        return np.maximum(self.shape1.evaluatedGrid, self.shape2.evaluatedGrid)
+
+
+class Difference(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+
+    def evaluatePoint(self, x, y, z):
+
+        outputs = [self.shape1.evaluatePoint(
+            x, y, z), -self.shape2.evaluatePoint(x, y, z)]
+
+        return np.maximum(self.shape1.evaluatedGrid, -self.shape2.evaluatedGrid)
+
+
+class Add(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+
+    def evaluatePoint(self, x, y, z):
+
+        outputs = [self.shape1.evaluatePoint(
+            x, y, z), self.shape2.evaluatePoint(x, y, z)]
+
+        return sum(outputs)
+
+
+class Subtract(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+
+    def evaluatePoint(self, x, y, z):
+
+        outputs = [self.shape1.evaluatePoint(
+            x, y, z), -self.shape2.evaluatePoint(x, y, z)]
+
+        return sum(outputs)
+
+
+class Multiply(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+
+    def evaluatePoint(self, x, y, z):
+
+        outputs = [self.shape1.evaluatePoint(
+            x, y, z), -self.shape2.evaluatePoint(x, y, z)]
+
+        return outputs[0] * outputs[1]
+
+
+class Lattice(Geometry):
+
+    morph = 'Lattice'
+
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0):
+        super().__init__(designSpace)
+
+        self.name = 'Blank'
+
+        self.transform = None
+
+        self.x = self.paramCheck(x)
+        self.y = self.paramCheck(y)
+        self.z = self.paramCheck(z)
+
+        self.nx = self.paramCheck(nx)
+        self.ny = self.paramCheck(ny)
+        self.nz = self.paramCheck(nz)
+        self.lx = self.paramCheck(lx)
+        self.ly = self.paramCheck(ly)
+        self.lz = self.paramCheck(lz)
+        self.t = self.paramCheck(t)
+
+        self.kx = 2 * math.pi * (self.nx / self.lx)
+        self.ky = 2 * math.pi * (self.ny / self.ly)
+        self.kz = 2 * math.pi * (self.nz / self.lz)
+
+        self.xLims = np.array([-self.lx, self.lx])
+        self.yLims = np.array([-self.ly, self.ly])
+        self.zLims = np.array([-self.lz, self.lz])
+
+    def __repr__(self):
+
+        return f'{self.__class__.__name__}({self.x}, {self.y}, {self.z}, {self.nx}, {self.ny}, {self.nz}, {self.lx}, {self.ly}, {self.lz}, {self.t})'
+
+    def __str__(self):
+
+        return f'{self.name} {self.morph}\n' + \
+            f'Centre(x, y, z): ({self.x}, {self.y}, {self.z})\n' + \
+            f'Number of Unit Cells per Unit Length(x, y, z): ({self.nx}, {self.ny}, {self.nz})\n' + \
+            f'Unit Cell Size (x, y, z): ({self.lx}, {self.ly}, {self.lz})\n' + \
+            f't Value: {self.t}'
+
+    def __add__(self, other):
+
+        return Union(self, other)
+
+    def __sub__(self, other):
+
+        return Difference(self, other)
+
+    def __truediv__(self, other):
+
+        return Intersection(self, other)
+
+    def changeZ(self, value):
+
+        self.lx = value
+        self.ly = value
+        self.lz = value
+        self.kx = 2 * math.pi * (self.nx / self.lx)
+        self.ky = 2 * math.pi * (self.ny / self.ly)
+        self.kz = 2 * math.pi * (self.nz / self.lz)
+        self.xLims = np.array([-self.lx, self.lx])
+        self.yLims = np.array([-self.ly, self.ly])
+        self.zLims = np.array([-self.lz, self.lz])
+
+    def paramCheck(self, n):
+
+        try:
+
+            float(n)
+            return n
+
+        except:
+            raise ValueError(f'{n} is not a number.')
+
+    def evaluatePoint(self, x, y, z):
+        pass
+
+
+class GyroidSurface(Lattice):
+    """Gyroid Lattice Object:\n\n\
+    (x, y, z)\t\t: Centre of Lattice. Adjust to Translate.\n\n\
+    (nx, ny, nz)\t: Number of unit cells per length.\n\n\
+    (lx, ly, lz)\t: Length of unit cell in each direction."""
+
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+
+        self.name = 'Gyroid_Surface'
+
+    def evaluatePoint(self, x, y, z):
+        """Returns the function value at point (x, y, z)."""
+
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+        kx = self.kx
+        ky = self.ky
+        kz = self.kz
+        t = self.t
+
+        expr = 'sin(kx*(x-x0))*cos(ky*(y-y0)) + \
+                sin(ky * (y - y0)) * cos(kz * (z - z0)) + \
+                sin(kz*(z-z0))*cos(kx*(x-x0)) - t '
+
+        return ne.evaluate(expr)
+        '''
+        return np.sin(self.kx*(x-self.x))*np.cos(self.ky*(y-self.y)) + \
+            np.sin(self.ky*(y-self.y))*np.cos(self.kz*(z-self.z)) + \
+            np.sin(self.kz*(z-self.z)) * \
+            np.cos(self.kx*(x-self.x)) - self.t
+        '''
+
+
+class DiamondSurface(Lattice):
+
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+
+        self.name = 'Diamond'
+
+    def evaluatePoint(self, x, y, z):
+
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+        kx = self.kx
+        ky = self.ky
+        kz = self.kz
+        t = self.t
+
+        expr = 'sin(kx * (x - x0)) * sin(ky * (y - y0)) * sin(kz * (z - z0)) + \
+                sin(kx * (x - x0)) * cos(ky * (y - y0)) * cos(kz * (z - z0)) + \
+                cos(kx * (x - x0)) * sin(ky * (y - y0)) * cos(kz * (z - z0)) + \
+                cos(kx * (x - x0)) * cos(ky * (y - y0)) * cos(kz * (z - z0)) - t'
+
+        return ne.evaluate(expr)
+
+        '''
+        return np.sin(self.kx*(x-self.x))*np.sin(self.ky*(y-self.y))*np.sin(self.kz*(z-self.z)) + \
+            np.sin(self.kx*(x-self.x))*np.cos(self.ky*(y-self.y))*np.cos(self.kz*(z-self.z)) + \
+            np.cos(self.kx*(x-self.x))*np.sin(self.ky*(y-self.y))*np.cos(self.kz*(z - self.z)) + \
+            np.cos(self.kx*(x-self.x))*np.cos(self.ky*(y-self.y)) * np.cos(self.kz*(z-self.z)) - \
+            self.t
+        '''
+
+
+class PrimitiveSurface(Lattice):
+
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+
+        self.name = 'Primitive'
+
+    def evaluatePoint(self, x, y, z):
+
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+        kx = self.kx
+        ky = self.ky
+        kz = self.kz
+        t = self.t
+
+        expr = '-(cos(kx*(x-x0)) + \
+                 cos(ky*(y-y0)) + \
+                 cos(kz * (z - z0)) - t) '
+
+        return ne.evaluate(expr)
+
+        '''
+        return -(np.cos(self.kx*(x-self.x)) +
+                 np.cos(self.ky*(y-self.y)) +
+                 np.cos(self.kz*(z-self.z)) - self.t)
+        '''
+
+
+class Gyroid(Lattice):
+    """Gyroid Lattice Object:\n\n\
+    (x, y, z)\t\t: Centre of Lattice. Adjust to Translate.\n\n\
+    (nx, ny, nz)\t: Number of unit cells per length.\n\n\
+    (lx, ly, lz)\t: Length of unit cell in each direction."""
+
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.6):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+
+        self.name = 'Solid_Gyroid'
+        self.coordSys = 'car'
+
+    def evaluatePoint(self, x, y, z):
+        """Returns the function value at point (x, y, z)."""
+
+        if self.coordSys == 'car':
+
+            if self.transform is not None:
+
+                print(self.transform)
+
+                x, y, z = self.transformInputs(x, y, z)
+
+        if self.coordSys == 'cyl':
+
+            r = np.sqrt(np.square(x) + np.square(y))
+            theta = np.arctan(y/z)
+
+            x = r * np.cos(theta)
+            y = r * np.sin(theta)
+
+        lattice = GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx,
+                                self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
+            GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
+                          self.nz, self.lx, self.ly, self.lz, -self.t)
+
+        return lattice.evaluatePoint(x, y, z)
+
+
+class DoubleGyroidNetwork(Lattice):
+    """Double Network Gyroid Lattice Object:\n\n\
+    (x, y, z)\t\t: Centre of Lattice. Adjust to Translate.\n\n\
+    (nx, ny, nz)\t: Number of unit cells per length.\n\n\
+    (lx, ly, lz)\t: Length of unit cell in each direction."""
+
+    def __init__(self, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
+        super().__init__(x, y, z, nx, ny, nz, lx, ly, lz, t)
+
+        self.name = 'Network_Gyroid'
+        self.coordSys = 'car'
+
+    def evaluatePoint(self, x, y, z):
+        """Returns the function value at point (x, y, z)."""
+
+        if self.coordSys == 'car':
+
+            x, y, z = self.transformInputs(x, y, z)
+
+        if self.coordSys == 'cyl':
+
+            r = np.sqrt(np.square(x) + np.square(y))
+            theta = np.arctan(y/z)
+
+            x = r * np.cos(theta)
+            y = r * np.sin(theta)
+
+        lattice = GyroidSurface(self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
+            GyroidSurface(self.x, self.y, self.z, self.nx, self.ny,
+                          self.nz, self.lx, self.ly, self.lz, -self.t)
+
+        return -lattice.evaluatePoint(x, y, z)
+
+
+class GyroidNetwork(Lattice):
+    """Network Gyroid Lattice Object:\n\n\
+    (x, y, z)\t\t: Centre of Lattice. Adjust to Translate.\n\n\
+    (nx, ny, nz)\t: Number of unit cells per length.\n\n\
+    (lx, ly, lz)\t: Length of unit cell in each direction."""
+
+    def __init__(self, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.9):
+        super().__init__(x, y, z, nx, ny, nz, lx, ly, lz, t)
+
+        self.name = 'Network_Gyroid'
+        self.coordSys = 'car'
+
+    def evaluatePoint(self, x, y, z):
+        """Returns the function value at point (x, y, z)."""
+
+        if self.coordSys == 'car':
+
+            x, y, z = self.transformInputs(x, y, z)
+
+        if self.coordSys == 'cyl':
+
+            r = np.sqrt(np.square(x) + np.square(y))
+            theta = np.arctan(y/z)
+
+            x = r * np.cos(theta)
+            y = r * np.sin(theta)
+
+        lattice = GyroidSurface(self.x, self.y, self.z, self.nx,
+                                self.ny, self.nz, self.lx, self.ly, self.lz, self.t)
+
+        return -lattice.evaluatePoint(x, y, z)
+
+
+class Diamond(Lattice):
+    """Diamond Lattice Object:\n\n\
+    (x, y, z)\t\t: Centre of Lattice. Adjust to Translate.\n\n\
+    (nx, ny, nz)\t: Number of unit cells per length.\n\n\
+    (lx, ly, lz)\t: Length of unit cell in each direction."""
+
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+
+        self.name = 'Solid_Diamond'
+
+    def evaluatePoint(self, x, y, z):
+        """Returns the function value at point (x, y, z)."""
+
+        lattice = DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx,
+                                 self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
+            DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
+                           self.nz, self.lx, self.ly, self.lz, -self.t)
+
+        return lattice.evaluatePoint(x, y, z)
+
+
+class DiamondNetwork(Lattice):
+    """Diamond Lattice Object:\n\n\
+    (x, y, z)\t\t: Centre of Lattice. Adjust to Translate.\n\n\
+    (nx, ny, nz)\t: Number of unit cells per length.\n\n\
+    (lx, ly, lz)\t: Length of unit cell in each direction."""
+
+    def __init__(self, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
+        super().__init__(x, y, z, nx, ny, nz, lx, ly, lz, t)
+
+        self.name = 'Network_Diamond'
+
+    def evaluatePoint(self, x, y, z):
+        """Returns the function value at point (x, y, z)."""
+
+        lattice = DiamondSurface(self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
+            DiamondSurface(self.x, self.y, self.z, self.nx, self.ny,
+                           self.nz, self.lx, self.ly, self.lz, -self.t)
+
+        return -lattice.evaluatePoint(x, y, z)
+
+
+class Primitive(Lattice):
+    """Primitive Lattice Object:\n\n\
+    (x, y, z)\t\t: Centre of Lattice. Adjust to Translate.\n\n\
+    (nx, ny, nz)\t: Number of unit cells per length.\n\n\
+    (lx, ly, lz)\t: Length of unit cell in each direction."""
+
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.6):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+
+        self.name = 'Solid_Primitive'
+
+    def evaluatePoint(self, x, y, z):
+        """Returns the function value at point (x, y, z)."""
+
+        lattice = PrimitiveSurface(self.designSpace, self.x, self.y, self.z, self.nx,
+                                   self.ny, self.nz, self.lx, self.ly, self.lz, -self.t) - \
+            PrimitiveSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
+                             self.nz, self.lx, self.ly, self.lz, self.t)
+
+        return lattice.evaluatePoint(x, y, z)
+
+
+class PrimitiveNetwork(Lattice):
+    """Primitive Lattice Object:\n\n\
+    (x, y, z)\t\t: Centre of Lattice. Adjust to Translate.\n\n\
+    (nx, ny, nz)\t: Number of unit cells per length.\n\n\
+    (lx, ly, lz)\t: Length of unit cell in each direction."""
+
+    def __init__(self, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
+        super().__init__(x, y, z, nx, ny, nz, lx, ly, lz, t)
+
+        self.name = 'Solid_Primitive'
+
+    def evaluatePoint(self, x, y, z):
+        """Returns the function value at point (x, y, z)."""
+
+        lattice = PrimitiveSurface(
+            self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, -self.t)
+
+        return -lattice.evaluatePoint(x, y, z)
+
+
+class Pattern(Shape):
+
+    def __init__(self, shape, nx=3, ny=2, nz=2, xd=0.5, yd=0.5, zd=0.5):
+
+        self.x = shape.x
+        self.y = shape.y
+        self.z = shape.z
+
+        super().__init__(self.x, self.y, self.z)
+
+        self.nx = nx
+        self.ny = ny
+        self.nz = nz
+
+        self.xd = xd
+        self.yd = yd
+        self.zd = zd
+
+        self.name = 'Pattern'
+
+        self.sourceShape = shape
+
+        self.shape = shape
+
+        self.setLims(self.sourceShape)
+
+        self.createPattern()
+
+    def createPattern(self):
+
+        for it in range(self.nx):
+
+            it += 1
+
+            new_shape = copy.deepcopy(self.sourceShape)
+
+            new_shape.translate(it*self.xd, 0, 0)
+
+            self.shape += new_shape
+
+        self.setLims(self.shape)
+
+        for it in range(self.ny):
+
+            it += 1
+
+            new_shape = copy.deepcopy(self.sourceShape)
+
+            new_shape.translate(0, it*self.yd, 0)
+
+            self.shape += new_shape
+
+        self.setLims(self.shape)
+
+        for it in range(self.nz):
+
+            it += 1
+
+            new_shape = copy.deepcopy(self.sourceShape)
+
+            new_shape.translate(0, 0, it*self.zd)
+
+            self.shape += new_shape
+
+        self.setLims(self.shape)
+
+    def setLims(self, obj):
+
+        self.xLims = obj.xLims
+        self.yLims = obj.yLims
+        self.zLims = obj.zLims
+
+    def evaluatePoint(self, x, y, z):
+
+        return self.shape.evaluatePoint(x, y, z)
+
+    def translate(self, x, y, z):
+
+        self.sourceShape.translate(x, y, z)
+
+        self.setLims(self.sourceShape)
+
+        self.__init__(self.sourceShape, self.nx, self.ny,
+                      self.nz, self.xd, self.yd, self.zd)
+
+
+class Blend(Boolean):
+
+    def __init__(self, shape1, shape2, blend=0.5):
+
+        super().__init__(shape1, shape2)
+
+        self.blend = blend
+
+    def evaluatePoint(self, x, y, z):
+
+        return self.blend * self.shape1.evaluatedGrid + \
+            (1 - self.blend) * self.shape2.evaluatedGrid
+
+
+'''
+
+
+class Latticed:
+
+    def __init__(self, shapes):
+
+        self.shapes = shapes
+        self.xLims = [0, 0]
+        self.yLims = [0, 0]
+        self.zLims = [0, 0]
+
+        self.shapesXmins = []
+        self.shapesXmaxs = []
+        self.shapesYmins = []
+        self.shapesYmaxs = []
+        self.shapesZmins = []
+        self.shapesZmaxs = []
+
+        for shape in self.shapes:
+
+            self.shapesXmins.append(shape.xLims[0])
+            self.shapesXmaxs.append(shape.xLims[1])
+            self.shapesYmins.append(shape.yLims[0])
+            self.shapesYmaxs.append(shape.yLims[1])
+            self.shapesZmins.append(shape.zLims[0])
+            self.shapesZmaxs.append(shape.zLims[1])
+
+        self.xLims[0] = min(self.shapesXmins)
+        self.xLims[1] = max(self.shapesXmaxs)
+        self.yLims[0] = min(self.shapesYmins)
+        self.yLims[1] = max(self.shapesYmaxs)
+        self.zLims[0] = min(self.shapesZmins)
+        self.zLims[1] = max(self.shapesZmaxs)
+
+    def evaluatePoint(self, x, y, z):
+
+        outputs = []
+
+        for shape in self.shapes:
+
+            outputs.append(shape.evaluatePoint(x, y, z))
+
+        return(max(outputs))
+
+    def plot(self, res=50):
+
+        offset = 0.5
+
+        midZ = sum(self.zLims)/2
+
+        X = np.linspace(self.xLims[0] - offset, self.xLims[1] + offset, res)
+        Y = np.linspace(self.yLims[0] - offset, self.yLims[1] + offset, res)
+
+        X, Y = np.meshgrid(X, Y)
+
+        vfunc = np.vectorize(self.evaluatePoint)
+
+        Z = vfunc(X, Y, midZ)
+
+        fig, ax = plt.subplots(1, 1)
+        plt.subplots_adjust(left=0.25, bottom=0.25)
+
+        im = ax.contourf(X, Y, Z, levels=[-0.1, 0])
+
+        plt.title('Combined Shape Field')
+
+        contourAxis = plt.gca()
+
+        axZ = plt.axes([0.25, 0.1, 0.65, 0.03])
+        axUC = plt.axes([0.25, 0.15, 0.65, 0.03])
+
+        zSlider = Slider(axZ, 'Z Value', min(self.zLims), max(
+            self.zLims), valinit=midZ, valstep=0.01)
+
+        ucSlider = Slider(axUC, 'Cell Size', 0.01, 2,
+                          valinit=1, valstep=0.01)
+
+        def update(val):
+
+            zVal = zSlider.val
+            ucVal = ucSlider.val
+            self.shapes[1].changeZ(ucVal)
+            vfunc = np.vectorize(self.evaluatePoint)
+            contourAxis.clear()
+            contourAxis.contourf(X, Y, vfunc(X, Y, zVal),
+                                 levels=[-0.1, 0])
+            plt.draw()
+
+        zSlider.on_changed(update)
+        ucSlider.on_changed(update)
+
+        rax = plt.axes([0.025, 0.5, 0.15, 0.15])
+        radio = RadioButtons(rax, ('Gyroid', 'Diamond', 'Primitive'), active=0)
+
+        def changeLattice(label):
+
+            lattices = {
+                'Gyroid': 'g',
+                'Diamond': 'd',
+                'Primitive': 'p'
+            }
+
+            contourAxis.clear()
+            self.shapes[1].latType = lattices[label]
+            contourAxis.contourf(X, Y, vfunc(X, Y, zSlider.val),
+                                 levels=100)
+
+        radio.on_clicked(changeLattice)
+
+        fig.colorbar(im, ax=ax)
+
+        plt.show()
+'''
+
+
+def visvisExample():
+
+    s1 = Cube(dim=0.5)
+
+    lower = -1
+    upper = 2
+    res = 100
+
+    X = np.linspace(lower-0.5, upper+0.5, res)
+    Y = np.linspace(lower-0.5, upper+0.5, res)
+    Z = np.linspace(lower-0.5, upper+0.5, res)
+
+    step = (upper - lower) / (res - 1)
+
+    XX, YY, ZZ = np.meshgrid(X, Y, Z)
+
+    arr = s1.evaluatePoint(XX, YY, ZZ)
+
+    dist = skfmm.distance(arr)
+
+    dist_verts, dist_faces, dist_normals, dist_values = measure.marching_cubes_lewiner(
+        dist, level=0, spacing=(step, step, step), step_size=1, gradient_direction='ascent')
+
+    # verts, faces, normals, values = measure.marching_cubes_lewiner(
+    # arr, level=0, spacing=(step, step, step), step_size=1, gradient_direction='ascent')
+
+    # verts -= 3
+
+    vv.figure()
+
+    # geom_mesh = vv.mesh(np.fliplr(verts), faces,
+    # normals, values)
+
+    dist_mesh = vv.mesh(dist_verts, dist_faces,
+                        dist_normals, dist_values)
+
+    a = vv.gca()
+    a.light0.ambient = 0.3  # 0.2 == default for light 0
+    a.light0.diffuse = 1.0  # 1.0 == default
+
+    # The other lights are off by default and are positioned at the origin
+    light1 = a.lights[1]
+    light1.On()
+    light1.ambient = 0.1  # 0.0 == default for other lights
+    light1.color = (0, 0, 0)  # this light == red
+
+    # Set settings for axes
+    num = upper - lower + 1
+    xlabels = np.linspace(lower, upper, num)
+    ylabels = np.linspace(lower, upper, num)
+    zlabels = np.linspace(lower, upper, num)
+
+    a = vv.gca()
+    a.axis.xTicks = xlabels
+    a.axis.xLabel = 'x'
+    a.axis.yTicks = ylabels
+    a.axis.yLabel = 'y'
+    a.axis.zTicks = zlabels
+    a.axis.zLabel = 'z'
+
+    a.bgcolor = 'w'
+    a.axis.axisColor = 'k'
+
+    vv.use().Run()
+
+
+def latticedSphereExample(outerRad=2, outerSkinThickness=0.1, innerRad=1, innerSkinThickness=0.1):
+
+    ds = DesignSpace(res=300)
+
+    outerSkin = HollowSphere(designSpace=ds, r=outerRad, t=outerSkinThickness)
+
+    latticeSection = HollowSphere(r=outerRad-outerSkinThickness,
+                                  t=outerRad - outerSkinThickness - innerRad,
+                                  designSpace=ds) / Gyroid(designSpace=ds)
+
+    innerSkin = HollowSphere(r=innerRad, t=innerSkinThickness, designSpace=ds)
+
+    s1 = Union(outerSkin, Union(latticeSection, innerSkin))
+
+    s1.previewModel(clip='x')
+
+
+def wireLattice():
+
+    vertices = np.array([
+        [0, 0, 0],
+        [1, 0, 0],
+        [0, 1, 0],
+        [1, 1, 0],
+        [0, 0, 1],
+        [1, 0, 1],
+        [0, 1, 1],
+        [1, 1, 1],
+    ])
+
+    edges = np.array([
+        [0, 3],
+        [0, 4],
+        [0, 6],
+        [1, 2],
+        [1, 4],
+        [1, 5],
+        [2, 6],
+        [2, 7],
+        [3, 5],
+        [3, 7],
+        [4, 7],
+        [5, 6]
+    ])
+
+    wireNetwork = pymesh.wires.WireNetwork.create_from_data(vertices, edges)
+
+    tiler = pymesh.Tiler(wireNetwork)
+    boxMin = np.zeros(3)
+    boxMax = np.ones(3) * 15.
+    reps = [3, 3, 3]
+    tiler.tile_with_guide_bbox(boxMin, boxMax, reps)
+
+    tiledNetwork = tiler.wire_network
+
+    inflator = pymesh.wires.Inflator(tiledNetwork)
+
+    inflator.set_profile(8)
+
+    inflator.set_refinement(2, "loop")
+
+    inflator.inflate(0.5)
+
+    tiledMesh = inflator.mesh
+
+    pymesh.save_mesh('tiledMesh.obj', tiledMesh)
+
+
+def main():
+
+    ds = DesignSpace(200)
+
+    sphere = Sphere(ds, x=1, y=1, z=0, r=2)
+
+    cube = Cube(ds, z=1, dim=1) / Gyroid(ds)
+
+    comp = Union(cube, sphere)
+
+    comp.saveMesh(filename='z0')
+
+
+def profile(func):
+
+    def inner(*args, **kwargs):
+
+        pr = cProfile.Profile()
+        pr.enable()
+        retval = func(*args, **kwargs)
+        pr.disable()
+        s = io.StringIO()
+        sortby = 'cumulative'
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print(s.getvalue())
+
+        return retval
+
+    return inner
+
+
+if __name__ == '__main__':
+
+    main()
