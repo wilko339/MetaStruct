@@ -25,19 +25,6 @@ from stl import mesh as msh
 from visvis.functions import gca, isosurface
 
 
-'''
-#### DISTANCE FIELD EVALULATIONS WITH FAST MARCHING ####
-
-dist = skfmm.distance(arr)
-
-dist_verts, dist_faces, dist_normals, dist_values = measure.marching_cubes_lewiner(
-    dist, level=0, spacing=(xStep, yStep, zStep), step_size=1, gradient_direction='ascent')
-
-dist_mesh = vv.mesh(dist_verts, dist_faces,
-                            dist_normals, dist_values)
-'''
-
-
 class DesignSpace:
 
     def __init__(self, res=200, xBounds=[-2, 3], yBounds=[-2, 3], zBounds=[-2, 3]):
@@ -85,8 +72,6 @@ class Geometry:
         self.z = 0
 
         self.transform = None
-
-        # self.xLims = self.yLims = self.zLims = [0, 0]
 
         self.mesh = []
 
@@ -141,13 +126,6 @@ class Geometry:
         pass
 
     def evaluateDistance(self, x, y, z):
-        '''
-        arr = self.evaluatePoint(x, y, z)
-
-        sign = np.sign(arr)
-
-        return np.sqrt(np.absolute(self.evaluatePoint(x, y, z))) * sign
-        '''
 
         val = self.evaluatePoint(x, y, z)
 
@@ -170,134 +148,6 @@ class Geometry:
         sample = self.evaluatePoint(X, Y, Z)
 
         return np.gradient(sample, delta, edge_order=2)
-
-    def plot(self, res=500, out='v', style='s'):
-
-        zRes = math.ceil(res / 2)
-
-        # zRes = 5
-
-        calcs = res**2 * zRes
-
-        print(f'Performing {calcs} calculations...')
-        print('\n------------------------------------\n')
-
-        t1 = time.time()
-        '''
-        if out == 'd' and style == 's':
-
-            print('Cannot display surface (s) on distance plot.')
-            print('Will display as field (f).')
-            style = 'f'
-        '''
-
-        offset = 1
-
-        X = np.linspace(self.xLims[0] - offset, self.xLims[1] + offset, res)
-        Y = np.linspace(self.yLims[0] - offset, self.yLims[1] + offset, res)
-        Z = np.linspace(self.zLims[0], self.zLims[1], zRes)
-
-        step = (self.zLims[1] - self.zLims[0])/(zRes-1)
-
-        midZ = Z[math.ceil(len(Z)/2)]
-
-        X, Y = np.meshgrid(X, Y)
-
-        arrays = []
-
-        if out == 'v':
-
-            for z in Z:
-
-                array = self.evaluatePoint(X, Y, z)
-
-                arrays.append(array)
-
-        if out == 'd':
-
-            dx = float(step)
-
-            for z in Z:
-
-                vals = self.evaluatePoint(X, Y, z)
-
-                grad_eval = np.gradient(vals, dx, edge_order=2)
-
-                length = LA.norm(grad_eval)
-
-                array = vals / length
-
-                # array = (self.evaluateDistance(X, Y, z))
-                '''
-                try:
-                    array = skfmm.distance(array, dx=dx)
-                except:
-                    print('No Zero contour detected, skipping value.')
-                    pass
-                '''
-                arrays.append(array)
-
-        t1 = time.time_ns()
-
-        array_dict = dict(zip(Z, arrays))
-
-        t2 = time.time_ns()
-
-        calculation_time = t2 - t1
-
-        average_calc_time = calculation_time / calcs
-
-        print(f'Total Calculation Time: {calculation_time}ns')
-
-        print(
-            f'Average Time per Calculation: {format(average_calc_time, ".2f")}ns')
-
-        if style == 'f':
-
-            levels = 100
-
-        if style == 's':
-
-            levels = [0, 0.1, 0.2]
-
-        fig, ax = plt.subplots(1, 1)
-        plt.subplots_adjust(left=0.25, bottom=0.25)
-
-        im = ax.contour(
-            X, Y, array_dict[midZ], levels=levels, cmap=cm.jet, vmin=0, vmax=1)
-
-        t2 = time.time_ns()
-
-        print(f'Plot Created in: {(t2 - t1)}ns')
-        print('\n------------------------------------\n')
-
-        plt.title('Shape Field')
-
-        ax.set(xlabel='X', ylabel='Y')
-
-        contourAxis = plt.gca()
-
-        axX = plt.axes([0.25, 0.1, 0.65, 0.03])
-
-        zSlider = Slider(axX, 'Z Value', min(self.zLims), max(
-            self.zLims), valinit=midZ, valstep=step)
-
-        def changeZ(val):
-
-            zVal = zSlider.val
-            contourAxis.clear()
-            if zSlider.val != self.zLims[0] or self.zLims[1]:
-                contourAxis.contour(X, Y, array_dict[zVal],
-                                    levels=levels, cmap=cm.jet, vmin=0, vmax=1)
-            ax.set(xlabel='X', ylabel='Y')
-
-            plt.draw()
-
-        zSlider.on_changed(changeZ)
-
-        fig.colorbar(im, ax=ax)
-
-        plt.show()
 
     def translate(self, x, y, z):
 
@@ -461,29 +311,12 @@ class Geometry:
 
         shapeMesh = vv.mesh(self.verts, faces=self.faces, normals=self.normals)
 
-        '''
-        minXlabel = math.floor(self.xLower)
-        maxXlabel = math.ceil(self.xUpper)
-        minYlabel = math.floor(self.yLower)
-        maxYlabel = math.ceil(self.yUpper)
-        minZlabel = math.floor(self.zLower)
-        maxZlabel = math.ceil(self.zUpper)
-
-        numX = maxXlabel - minXlabel + 1
-        numY = maxYlabel - minYlabel + 1
-        numZ = maxZlabel - minZlabel + 1
-
-        xlabels = np.linspace(minXlabel, maxXlabel, numX)
-        ylabels = np.linspace(minYlabel, maxYlabel, numY)
-        zlabels = np.linspace(minZlabel, maxZlabel, numZ)
-        '''
-
         a = vv.gca()
-        # a.axis.xTicks = xlabels
+
         a.axis.xLabel = 'x'
-        # a.axis.yTicks = ylabels
+
         a.axis.yLabel = 'y'
-        # a.axis.zTicks = zlabels
+
         a.axis.zLabel = 'z'
 
         a.bgcolor = 'w'
@@ -625,8 +458,6 @@ class Geometry:
 
         self.mesh = self.fix_mesh(self.mesh)
 
-        # out_mesh = pymesh.tetrahedralize(out_mesh, 0.01)
-
         print(f'Exporting "{self.filename}" mesh file...\n')
 
         pymesh.save_mesh(self.filename, self.mesh, ascii=True)
@@ -638,7 +469,6 @@ class Geometry:
             FileNotFoundError(f'Cannot find "{self.filename}" in folder.')
 
         print(f'"{self.filename}" successfully exported.\n')
-        # print(f'"{filename}" has {num_triangles} total triangles.')
 
     def wireLattice(self):
 
@@ -1285,9 +1115,6 @@ class Difference(Boolean):
 
     def evaluatePoint(self, x, y, z):
 
-        outputs = [self.shape1.evaluatePoint(
-            x, y, z), -self.shape2.evaluatePoint(x, y, z)]
-
         return np.maximum(self.shape1.evaluatedGrid, -self.shape2.evaluatedGrid)
 
 
@@ -1298,8 +1125,7 @@ class Add(Boolean):
 
     def evaluatePoint(self, x, y, z):
 
-        outputs = [self.shape1.evaluatePoint(
-            x, y, z), self.shape2.evaluatePoint(x, y, z)]
+        outputs = [self.shape1.evaluatedGrid, self.shape2.evaluatedGrid]
 
         return sum(outputs)
 
@@ -1311,8 +1137,7 @@ class Subtract(Boolean):
 
     def evaluatePoint(self, x, y, z):
 
-        outputs = [self.shape1.evaluatePoint(
-            x, y, z), -self.shape2.evaluatePoint(x, y, z)]
+        outputs = [self.shape1.evaluatedGrid, -self.shape2.evaluatedGrid]
 
         return sum(outputs)
 
@@ -1324,8 +1149,7 @@ class Multiply(Boolean):
 
     def evaluatePoint(self, x, y, z):
 
-        outputs = [self.shape1.evaluatePoint(
-            x, y, z), -self.shape2.evaluatePoint(x, y, z)]
+        outputs = [self.shape1.evaluatedGrid, -self.shape2.evaluatedGrid]
 
         return outputs[0] * outputs[1]
 
@@ -1798,188 +1622,6 @@ class Blend(Boolean):
 
         return self.blend * self.shape1.evaluatedGrid + \
             (1 - self.blend) * self.shape2.evaluatedGrid
-
-
-'''
-
-
-class Latticed:
-
-    def __init__(self, shapes):
-
-        self.shapes = shapes
-        self.xLims = [0, 0]
-        self.yLims = [0, 0]
-        self.zLims = [0, 0]
-
-        self.shapesXmins = []
-        self.shapesXmaxs = []
-        self.shapesYmins = []
-        self.shapesYmaxs = []
-        self.shapesZmins = []
-        self.shapesZmaxs = []
-
-        for shape in self.shapes:
-
-            self.shapesXmins.append(shape.xLims[0])
-            self.shapesXmaxs.append(shape.xLims[1])
-            self.shapesYmins.append(shape.yLims[0])
-            self.shapesYmaxs.append(shape.yLims[1])
-            self.shapesZmins.append(shape.zLims[0])
-            self.shapesZmaxs.append(shape.zLims[1])
-
-        self.xLims[0] = min(self.shapesXmins)
-        self.xLims[1] = max(self.shapesXmaxs)
-        self.yLims[0] = min(self.shapesYmins)
-        self.yLims[1] = max(self.shapesYmaxs)
-        self.zLims[0] = min(self.shapesZmins)
-        self.zLims[1] = max(self.shapesZmaxs)
-
-    def evaluatePoint(self, x, y, z):
-
-        outputs = []
-
-        for shape in self.shapes:
-
-            outputs.append(shape.evaluatePoint(x, y, z))
-
-        return(max(outputs))
-
-    def plot(self, res=50):
-
-        offset = 0.5
-
-        midZ = sum(self.zLims)/2
-
-        X = np.linspace(self.xLims[0] - offset, self.xLims[1] + offset, res)
-        Y = np.linspace(self.yLims[0] - offset, self.yLims[1] + offset, res)
-
-        X, Y = np.meshgrid(X, Y)
-
-        vfunc = np.vectorize(self.evaluatePoint)
-
-        Z = vfunc(X, Y, midZ)
-
-        fig, ax = plt.subplots(1, 1)
-        plt.subplots_adjust(left=0.25, bottom=0.25)
-
-        im = ax.contourf(X, Y, Z, levels=[-0.1, 0])
-
-        plt.title('Combined Shape Field')
-
-        contourAxis = plt.gca()
-
-        axZ = plt.axes([0.25, 0.1, 0.65, 0.03])
-        axUC = plt.axes([0.25, 0.15, 0.65, 0.03])
-
-        zSlider = Slider(axZ, 'Z Value', min(self.zLims), max(
-            self.zLims), valinit=midZ, valstep=0.01)
-
-        ucSlider = Slider(axUC, 'Cell Size', 0.01, 2,
-                          valinit=1, valstep=0.01)
-
-        def update(val):
-
-            zVal = zSlider.val
-            ucVal = ucSlider.val
-            self.shapes[1].changeZ(ucVal)
-            vfunc = np.vectorize(self.evaluatePoint)
-            contourAxis.clear()
-            contourAxis.contourf(X, Y, vfunc(X, Y, zVal),
-                                 levels=[-0.1, 0])
-            plt.draw()
-
-        zSlider.on_changed(update)
-        ucSlider.on_changed(update)
-
-        rax = plt.axes([0.025, 0.5, 0.15, 0.15])
-        radio = RadioButtons(rax, ('Gyroid', 'Diamond', 'Primitive'), active=0)
-
-        def changeLattice(label):
-
-            lattices = {
-                'Gyroid': 'g',
-                'Diamond': 'd',
-                'Primitive': 'p'
-            }
-
-            contourAxis.clear()
-            self.shapes[1].latType = lattices[label]
-            contourAxis.contourf(X, Y, vfunc(X, Y, zSlider.val),
-                                 levels=100)
-
-        radio.on_clicked(changeLattice)
-
-        fig.colorbar(im, ax=ax)
-
-        plt.show()
-'''
-
-
-def visvisExample():
-
-    s1 = Cube(dim=0.5)
-
-    lower = -1
-    upper = 2
-    res = 100
-
-    X = np.linspace(lower-0.5, upper+0.5, res)
-    Y = np.linspace(lower-0.5, upper+0.5, res)
-    Z = np.linspace(lower-0.5, upper+0.5, res)
-
-    step = (upper - lower) / (res - 1)
-
-    XX, YY, ZZ = np.meshgrid(X, Y, Z)
-
-    arr = s1.evaluatePoint(XX, YY, ZZ)
-
-    dist = skfmm.distance(arr)
-
-    dist_verts, dist_faces, dist_normals, dist_values = measure.marching_cubes_lewiner(
-        dist, level=0, spacing=(step, step, step), step_size=1, gradient_direction='ascent')
-
-    # verts, faces, normals, values = measure.marching_cubes_lewiner(
-    # arr, level=0, spacing=(step, step, step), step_size=1, gradient_direction='ascent')
-
-    # verts -= 3
-
-    vv.figure()
-
-    # geom_mesh = vv.mesh(np.fliplr(verts), faces,
-    # normals, values)
-
-    dist_mesh = vv.mesh(dist_verts, dist_faces,
-                        dist_normals, dist_values)
-
-    a = vv.gca()
-    a.light0.ambient = 0.3  # 0.2 == default for light 0
-    a.light0.diffuse = 1.0  # 1.0 == default
-
-    # The other lights are off by default and are positioned at the origin
-    light1 = a.lights[1]
-    light1.On()
-    light1.ambient = 0.1  # 0.0 == default for other lights
-    light1.color = (0, 0, 0)  # this light == red
-
-    # Set settings for axes
-    num = upper - lower + 1
-    xlabels = np.linspace(lower, upper, num)
-    ylabels = np.linspace(lower, upper, num)
-    zlabels = np.linspace(lower, upper, num)
-
-    a = vv.gca()
-    a.axis.xTicks = xlabels
-    a.axis.xLabel = 'x'
-    a.axis.yTicks = ylabels
-    a.axis.yLabel = 'y'
-    a.axis.zTicks = zlabels
-    a.axis.zLabel = 'z'
-
-    a.bgcolor = 'w'
-    a.axis.axisColor = 'k'
-
-    vv.use().Run()
 
 
 def latticedSphereExample(outerRad=2, outerSkinThickness=0.1, innerRad=1, innerSkinThickness=0.1):
