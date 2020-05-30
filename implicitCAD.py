@@ -412,9 +412,10 @@ class Geometry:
 
         return mesh
 
-    def saveMesh(self, filename=None, fileFormat='obj'):
+    def saveMesh(self, filename=None, fileFormat='obj', quality='normal'):
 
         res = self.designSpace.res
+        self.quality = quality
 
         formats = {'obj': '.obj',
                    'stl': '.stl',
@@ -447,7 +448,7 @@ class Geometry:
 
         self.mesh = pymesh.meshio.form_mesh(self.verts, self.faces)
 
-        self.mesh = self.fix_mesh(self.mesh)
+        self.mesh = self.fix_mesh(self.mesh, detail=self.quality)
 
         print(f'Exporting "{self.filename}" mesh file...\n')
 
