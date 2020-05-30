@@ -1343,8 +1343,6 @@ class Gyroid(Lattice):
 
             if self.transform is not None:
 
-                print(self.transform)
-
                 x, y, z = self.transformInputs(x, y, z)
 
         if self.coordSys == 'cyl':
@@ -1369,8 +1367,8 @@ class DoubleGyroidNetwork(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def __init__(self, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
-        super().__init__(x, y, z, nx, ny, nz, lx, ly, lz, t)
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
 
         self.name = 'Network_Gyroid'
         self.coordSys = 'car'
@@ -1380,7 +1378,9 @@ class DoubleGyroidNetwork(Lattice):
 
         if self.coordSys == 'car':
 
-            x, y, z = self.transformInputs(x, y, z)
+            if self.transform is not None:
+
+                x, y, z = self.transformInputs(x, y, z)
 
         if self.coordSys == 'cyl':
 
