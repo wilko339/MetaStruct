@@ -21,7 +21,7 @@ from visvis.functions import gca, isosurface
 
 class DesignSpace:
 
-    def __init__(self, res=200, xBounds=[-2, 3], yBounds=[-2, 3], zBounds=[-2, 3]):
+    def __init__(self, res=300, xBounds=[-2, 2], yBounds=[-2, 2], zBounds=[-2, 2]):
 
         self.xBounds = xBounds
         self.yBounds = yBounds
