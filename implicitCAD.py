@@ -5,6 +5,7 @@ import math
 import os
 import pstats
 import time
+import timeit
 
 import numexpr as ne
 import numpy as np
@@ -118,27 +119,7 @@ class Geometry:
 
     def evaluateDistance(self, x, y, z):
 
-        val = self.evaluatePoint(x, y, z)
-
-        grad = self.pointGradient(x, y, z)
-
-        length = LA.norm(grad)
-
-        return val / length
-
-    def pointGradient(self, x, y, z):
-
-        delta = 0.01
-
-        X = np.linspace(x-delta, x+delta, 3)
-        Y = np.linspace(y-delta, y+delta, 3)
-        Z = np.linspace(z-delta, z+delta, 3)
-
-        X, Y, Z = np.meshgrid(X, Y, Z)
-
-        sample = self.evaluatePoint(X, Y, Z)
-
-        return np.gradient(sample, delta, edge_order=2)
+        pass
 
     def translate(self, x, y, z):
 
@@ -228,6 +209,7 @@ class Geometry:
 
         self.ZZ, self.YY, self.XX = np.meshgrid(X, Y, Z)
 
+    @profile(immediate=True)
     def evaluateGrid(self):
 
         print(f'Evaluating grid points for {self.name}...')
@@ -483,7 +465,7 @@ class Shape(Geometry):
         self.y = self.paramCheck(y)
         self.z = self.paramCheck(z)
 
-        self.transform = np.identity(3)
+        self.transform = None
 
         self.XX = self.designSpace.XX
         self.YY = self.designSpace.YY
@@ -551,8 +533,8 @@ class Line(Shape):
 
 class Spheroid(Shape):
 
-    def __init__(self, x=0, y=0, z=0, xr=1, yr=2, zr=1, designSpace=DesignSpace):
-        super().__init__(x, y, z, designSpace)
+    def __init__(self, designSpace, x=0, y=0, z=0, xr=1, yr=2, zr=1, ):
+        super().__init__(designSpace, x, y, z)
 
         self.name = 'Spheroid'
 
@@ -715,7 +697,7 @@ class Cube(Shape):
         return super().__str__() + f'\nCube Radius: {self.dim}'
 
     def evaluatePoint(self, x, y, z):
-
+        '''
         if self.transform is not None:
 
             x, y, z = self.transformInputs(x, y, z)
@@ -726,6 +708,20 @@ class Cube(Shape):
                np.square(z - self.z) - (self.dim)**2]
 
         return np.maximum(np.maximum(arr[0], arr[1]), arr[2])
+        '''
+
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+        dim = self.dim
+
+        arr1 = ne.evaluate('(x-x0)**2 - dim**2')
+        arr2 = ne.evaluate('(y-y0)**2 - dim**2')
+        arr3 = ne.evaluate('(z-z0)**2 - dim**2')
+
+        max1 = ne.evaluate('where(arr1>arr2, arr1, arr2)')
+
+        return ne.evaluate('where(max1>arr3, max1, arr3)')
 
     def evaluateDistance(self, x, y, z):
 
@@ -1052,11 +1048,13 @@ class Boolean(Geometry):
 
         return Intersection(self, other)
 
-    def evaluateGrid(self):
+    def checkShapeGrids(self):
 
         for shape in self.shapes:
 
-            shape.evaluatedGrid = self.evaluatePoint(self.XX, self.YY, self.ZZ)
+            if not hasattr(shape, 'evaluatedGrid'):
+
+                shape.evaluateGrid()
 
     def translate(self, x, y, z):
 
@@ -1153,6 +1151,17 @@ class Add(Boolean):
 
         return sum(outputs)
 
+    def evaluateGrid(self):
+
+        self.checkShapeGrids()
+
+        g1 = self.shape1.evaluatedGrid
+        g2 = self.shape2.evaluatedGrid
+
+        expr = 'g1 + g2'
+
+        self.evaluatedGrid = ne.evaluate(expr)
+
 
 class Subtract(Boolean):
 
@@ -1165,6 +1174,17 @@ class Subtract(Boolean):
 
         return sum(outputs)
 
+    def evaluateGrid(self):
+
+        self.checkShapeGrids()
+
+        g1 = self.shape1.evaluatedGrid
+        g2 = self.shape2.evaluatedGrid
+
+        expr = 'g1 - g2'
+
+        self.evaluatedGrid = ne.evaluate(expr)
+
 
 class Multiply(Boolean):
 
@@ -1173,9 +1193,69 @@ class Multiply(Boolean):
 
     def evaluatePoint(self, x, y, z):
 
-        outputs = [self.shape1.evaluatedGrid, -self.shape2.evaluatedGrid]
+        outputs = [self.shape1.evaluatedGrid, self.shape2.evaluatedGrid]
 
         return outputs[0] * outputs[1]
+
+    def evaluateGrid(self):
+
+        self.checkShapeGrids()
+
+        g1 = self.shape1.evaluatedGrid
+        g2 = self.shape2.evaluatedGrid
+
+        expr = 'g1 * g2'
+
+        self.evaluatedGrid = ne.evaluate(expr)
+
+
+class Divide(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+
+    def evaluatePoint(self, x, y, z):
+
+        outputs = [self.shape1.evaluatedGrid, self.shape2.evaluatedGrid]
+
+        return outputs[0] / outputs[1]
+
+    def evaluateGrid(self):
+
+        self.checkShapeGrids()
+
+        g1 = self.shape1.evaluatedGrid
+        g2 = self.shape2.evaluatedGrid
+
+        expr = 'g1 / g2'
+
+        self.evaluatedGrid = ne.evaluate(expr)
+
+
+class Blend(Boolean):
+
+    def __init__(self, shape1, shape2, blend=0.5):
+
+        super().__init__(shape1, shape2)
+
+        self.blend = blend
+
+    def evaluatePoint(self, x, y, z):
+
+        return self.blend * self.shape1.evaluatePoint(x, y, z) + \
+            (1 - self.blend) * self.shape2.evaluatePoint(x, y, z)
+
+    def evaluateGrid(self):
+
+        self.checkShapeGrids()
+
+        g1 = self.shape1.evaluatedGrid
+        g2 = self.shape2.evaluatedGrid
+        b = self.blend
+
+        expr = 'b * g1 + (1 - b) * g2'
+
+        self.evaluatedGrid = ne.evaluate(expr)
 
 
 class Lattice(Geometry):
@@ -1633,20 +1713,6 @@ class Pattern(Shape):
                       self.nz, self.xd, self.yd, self.zd)
 
 
-class Blend(Boolean):
-
-    def __init__(self, shape1, shape2, blend=0.5):
-
-        super().__init__(shape1, shape2)
-
-        self.blend = blend
-
-    def evaluatePoint(self, x, y, z):
-
-        return self.blend * self.shape1.evaluatedGrid + \
-            (1 - self.blend) * self.shape2.evaluatedGrid
-
-
 def latticedSphereExample(outerRad=2, outerSkinThickness=0.1, innerRad=1, innerSkinThickness=0.1):
 
     ds = DesignSpace(res=300)
@@ -1717,7 +1783,9 @@ def wireLattice():
 
 def main():
 
-    pass
+    ds = DesignSpace()
+
+    Cube(ds).evaluateGrid()
 
 
 def profile(func):
