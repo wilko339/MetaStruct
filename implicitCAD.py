@@ -21,7 +21,7 @@ from visvis.functions import gca, isosurface
 
 class DesignSpace:
 
-    def __init__(self, res=300, xBounds=[-2, 2], yBounds=[-2, 2], zBounds=[-2, 2]):
+    def __init__(self, res=300, xBounds=[-3, 3], yBounds=[-3, 3], zBounds=[-3, 3]):
 
         self.xBounds = xBounds
         self.yBounds = yBounds
@@ -1052,8 +1052,11 @@ class Boolean(Geometry):
 
         return Intersection(self, other)
 
-    def evaluatePoint(self):
-        pass
+    def evaluateGrid(self):
+
+        for shape in self.shapes:
+
+            shape.evaluatedGrid = self.evaluatePoint(self.XX, self.YY, self.ZZ)
 
     def translate(self, x, y, z):
 
@@ -1077,17 +1080,30 @@ class Union(Boolean):
 
 class SmoothUnion(Boolean):
 
-    def __init__(self, shape1, shape2, blend=1):
+    def __init__(self, shape1, shape2, blend=4):
         super().__init__(shape1, shape2)
 
         self.blend = blend
 
     def evaluatePoint(self, x, y, z):
 
+        res = np.exp(-self.blend * self.shape1.evaluatePoint(x, y, z)) + \
+            np.exp(-self.blend * self.shape2.evaluatePoint(x, y, z))
+
+        return -np.log(np.maximum(0.0001, res)) / self.blend
+
+    def evaluateGrid(self):
+
+        for shape in self.shapes:
+
+            if not hasattr(shape, 'evaluatedGrid'):
+
+                shape.evaluateGrid()
+
         res = np.exp(-self.blend * self.shape1.evaluatedGrid) + \
             np.exp(-self.blend * self.shape2.evaluatedGrid)
 
-        return -np.log(np.maximum(0.0001, res)) / self.blend
+        self.evaluatedGrid = -np.log(np.maximum(0.0001, res)) / self.blend
 
 
 class Intersection(Boolean):
@@ -1097,7 +1113,17 @@ class Intersection(Boolean):
 
     def evaluatePoint(self, x, y, z):
 
-        return np.maximum(self.shape1.evaluatedGrid, self.shape2.evaluatedGrid)
+        return np.maximum(self.shape1.evaluatePoint(x, y, z), self.shape2.evaluatePoint(x, y, z))
+
+    def evaluateGrid(self):
+        for shape in self.shapes:
+
+            if not hasattr(shape, 'evaluatedGrid'):
+
+                shape.evaluateGrid()
+
+        self.evaluatedGrid = np.maximum(
+            self.shape1.evaluatedGrid, self.shape2.evaluatedGrid)
 
 
 class Difference(Boolean):
@@ -1106,6 +1132,12 @@ class Difference(Boolean):
         super().__init__(shape1, shape2)
 
     def evaluatePoint(self, x, y, z):
+
+        for shape in self.shapes:
+
+            if not hasattr(shape, 'evaluatedGrid'):
+
+                shape.evaluateGrid()
 
         return np.maximum(self.shape1.evaluatedGrid, -self.shape2.evaluatedGrid)
 
@@ -1222,9 +1254,6 @@ class Lattice(Geometry):
 
         except:
             raise ValueError(f'{n} is not a number.')
-
-    def evaluatePoint(self, x, y, z):
-        pass
 
 
 class GyroidSurface(Lattice):
@@ -1368,7 +1397,7 @@ class DoubleGyroidNetwork(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=1.2):
         super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
 
         self.name = 'Network_Gyroid'
@@ -1391,8 +1420,8 @@ class DoubleGyroidNetwork(Lattice):
             x = r * np.cos(theta)
             y = r * np.sin(theta)
 
-        lattice = GyroidSurface(self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
-            GyroidSurface(self.x, self.y, self.z, self.nx, self.ny,
+        lattice = GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
+            GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
                           self.nz, self.lx, self.ly, self.lz, -self.t)
 
         return -lattice.evaluatePoint(x, y, z)
@@ -1461,16 +1490,16 @@ class DiamondNetwork(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def __init__(self, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
-        super().__init__(x, y, z, nx, ny, nz, lx, ly, lz, t)
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
 
         self.name = 'Network_Diamond'
 
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
-        lattice = DiamondSurface(self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
-            DiamondSurface(self.x, self.y, self.z, self.nx, self.ny,
+        lattice = DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
+            DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
                            self.nz, self.lx, self.ly, self.lz, -self.t)
 
         return -lattice.evaluatePoint(x, y, z)
@@ -1504,16 +1533,16 @@ class PrimitiveNetwork(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def __init__(self, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
-        super().__init__(x, y, z, nx, ny, nz, lx, ly, lz, t)
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
 
         self.name = 'Solid_Primitive'
 
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
-        lattice = PrimitiveSurface(
-            self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, -self.t)
+        lattice = PrimitiveSurface(self.designSpace,
+                                   self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, -self.t)
 
         return -lattice.evaluatePoint(x, y, z)
 
