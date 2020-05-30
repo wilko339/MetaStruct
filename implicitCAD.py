@@ -108,9 +108,6 @@ class Geometry:
 
             print('------------------------------------------------------------------\n')
 
-        print(self.zLims)
-        print(self.designSpace.zUpper, self.designSpace.zLower)
-
     def setLims(self):
 
         pass
@@ -1688,15 +1685,7 @@ def wireLattice():
 
 def main():
 
-    ds = DesignSpace(200)
-
-    sphere = Sphere(ds, x=1, y=1, z=0, r=2)
-
-    cube = Cube(ds, z=1, dim=1) / Gyroid(ds)
-
-    comp = Union(cube, sphere)
-
-    comp.saveMesh(filename='z0')
+    pass
 
 
 def profile(func):
