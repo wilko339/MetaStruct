@@ -22,7 +22,7 @@ from visvis.functions import gca, isosurface
 
 class DesignSpace:
 
-    def __init__(self, res=300, xBounds=[-3, 3], yBounds=[-3, 3], zBounds=[-3, 3]):
+    def __init__(self, res=100, xBounds=[-3, 3], yBounds=[-3, 3], zBounds=[-3, 3]):
 
         self.xBounds = xBounds
         self.yBounds = yBounds
@@ -209,7 +209,6 @@ class Geometry:
 
         self.ZZ, self.YY, self.XX = np.meshgrid(X, Y, Z)
 
-    @profile(immediate=True)
     def evaluateGrid(self):
 
         print(f'Evaluating grid points for {self.name}...')
@@ -1067,10 +1066,17 @@ class Union(Boolean):
     def __init__(self, shape1, shape2):
         super().__init__(shape1, shape2)
 
-    # @profile(immediate=True)
     def evaluatePoint(self, x, y, z):
 
-        return np.minimum(self.shape1.evaluatedGrid, self.shape2.evaluatedGrid)
+        return np.minimum(self.shape1.evaluatePoint(x, y, z), self.shape2.evaluatePoint(x, y, z))
+
+    @profile(immediate=True)
+    def evaluateGrid(self):
+
+        s1 = self.shape1.evaluatedGrid
+        s2 = self.shape2.evaluatedGrid
+
+        self.evaluatedGrid = ne.evaluate('where(s1<s2, s1, s2)')
 
 
 class SmoothUnion(Boolean):
@@ -1761,9 +1767,11 @@ def wireLattice():
 
 def main():
 
-    ds = DesignSpace()
+    ds = DesignSpace(res=500)
 
-    Gyroid(ds).evaluateGrid()
+    shape = Torus(ds, r1=1.5, r2=0.2) + Cube(ds, x=1.25)
+
+    shape.previewModel()
 
 
 def profile(func):
