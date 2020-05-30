@@ -186,29 +186,6 @@ class Geometry:
 
         return x, y, z
 
-    def generateSampleGrid(self):
-
-        res = self.designSpace.res
-
-        self.xLower = min(self.xLims)
-        self.xUpper = max(self.xLims)
-        self.yLower = min(self.yLims)
-        self.yUpper = max(self.yLims)
-        self.zLower = min(self.zLims)
-        self.zUpper = max(self.zLims)
-
-        offset = 0.1
-
-        X = np.linspace(self.xLower - offset, self.xUpper + offset, res)
-        Y = np.linspace(self.yLower - offset, self.yUpper + offset, res)
-        Z = np.linspace(self.zLower - offset, self.zUpper + offset, res)
-
-        self.xStep = (self.xUpper - self.xLower) / (res - 1)
-        self.yStep = (self.yUpper - self.yLower) / (res - 1)
-        self.zStep = (self.zUpper - self.zLower) / (res - 1)
-
-        self.ZZ, self.YY, self.XX = np.meshgrid(X, Y, Z)
-
     def evaluateGrid(self):
 
         print(f'Evaluating grid points for {self.name}...')
