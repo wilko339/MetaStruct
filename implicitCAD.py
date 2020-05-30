@@ -1426,7 +1426,7 @@ class GyroidNetwork(Lattice):
             x = r * np.cos(theta)
             y = r * np.sin(theta)
 
-        lattice = GyroidSurface(self.x, self.y, self.z, self.nx,
+        lattice = GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx,
                                 self.ny, self.nz, self.lx, self.ly, self.lz, self.t)
 
         return -lattice.evaluatePoint(x, y, z)
