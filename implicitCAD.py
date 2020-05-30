@@ -459,7 +459,7 @@ class Shape(Geometry):
 
         super().__init__(self.designSpace)
 
-        self.name = 'Blank'
+        self.name = self.__class__.__name__
 
         self.x = self.paramCheck(x)
         self.y = self.paramCheck(y)
@@ -536,8 +536,6 @@ class Spheroid(Shape):
     def __init__(self, designSpace, x=0, y=0, z=0, xr=1, yr=2, zr=1, ):
         super().__init__(designSpace, x, y, z)
 
-        self.name = 'Spheroid'
-
         self.xr = self.paramCheck(xr)
         self.yr = self.paramCheck(yr)
         self.zr = self.paramCheck(zr)
@@ -584,8 +582,6 @@ class Sphere(Shape):
 
     def __init__(self, designSpace, x=0, y=0, z=0, r=1):
         super().__init__(designSpace, x, y, z)
-
-        self.name = 'Sphere'
 
         self.r = self.paramCheck(r)
 
@@ -636,8 +632,6 @@ class HollowSphere(Shape):
 
         super().__init__(self.designSpace, x, y, z)
 
-        self.name = 'Hollow Sphere'
-
         self.r = self.paramCheck(r)
         self.t = self.paramCheck(t)
         self.setLims()
@@ -673,8 +667,6 @@ class Cube(Shape):
     def __init__(self, designSpace, x=0, y=0, z=0, dim=1):
         super().__init__(designSpace, x, y, z)
 
-        self.name = 'Cube'
-
         self.dim = self.paramCheck(dim)
 
         self.setLims()
@@ -697,13 +689,12 @@ class Cube(Shape):
         return super().__str__() + f'\nCube Radius: {self.dim}'
 
     def evaluatePoint(self, x, y, z):
-        '''
+
         if self.transform is not None:
 
             x, y, z = self.transformInputs(x, y, z)
 
-        ### Numexpr does not support elementwise min / max, so will stick with NumPy for now... :( ###
-
+        '''
         arr = [np.square(x - self.x) - (self.dim)**2, np.square(y - self.y) - (self.dim)**2,
                np.square(z - self.z) - (self.dim)**2]
 
@@ -747,10 +738,8 @@ class Cube(Shape):
 
 class HollowCube(Shape):
 
-    def __init__(self, x=0, y=0, z=0, dim=1, t=0.3):
-        super().__init__(x, y, z, designSpace)
-
-        self.name = 'Hollow Cube'
+    def __init__(self, designSpace, x=0, y=0, z=0, dim=1, t=0.3):
+        super().__init__(designSpace, x, y, z)
 
         self.dim = self.paramCheck(dim)
         self.t = self.paramCheck(t)
@@ -783,7 +772,8 @@ class HollowCube(Shape):
 
 class Torus(Shape):
 
-    def __init__(self, x=0, y=0, z=0, r1=1, r2=0.5):
+    def __init__(self, designSpace, x=0, y=0, z=0, r1=1, r2=0.5):
+        super().__init__(designSpace, x, y, z)
 
         self.x = x
         self.y = y
@@ -804,16 +794,25 @@ class Torus(Shape):
 
     def evaluatePoint(self, x, y, z):
 
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+        r1 = self.r1
+        r2 = self.r2
+
+        expr = '(sqrt((x-x0)**2 + (y-y0)**2) - r1)**2 + (z-z0)**2 - r2**2'
+
+        return ne.evaluate(expr)
+        '''
         return np.square(np.sqrt(np.square(x) + np.square(y)) - self.r1) + \
             np.square(z) - self.r2**2
+        '''
 
 
 class Cuboid(Shape):
 
     def __init__(self, x=0, y=0, z=0, xd=1, yd=1.5, zd=1):
         super().__init__(x, y, z, designSpace)
-
-        self.name = 'Cuboid'
 
         self.xd = self.paramCheck(xd)
         self.yd = self.paramCheck(yd)
@@ -861,8 +860,6 @@ class Cylinder(Shape):
 
     def __init__(self, x=0, y=0, z=0, r1=1, r2=1, l=1, ax='z'):
         super().__init__(x, y, z, designSpace)
-
-        self.name = 'Cylinder'
 
         self.r1 = self.paramCheck(r1)
         self.r2 = self.paramCheck(r2)
@@ -1265,9 +1262,9 @@ class Lattice(Geometry):
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0):
         super().__init__(designSpace)
 
-        self.name = 'Blank'
-
         self.transform = None
+
+        self.name = self.__class__.__name__
 
         self.x = self.paramCheck(x)
         self.y = self.paramCheck(y)
@@ -1345,8 +1342,6 @@ class GyroidSurface(Lattice):
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0):
         super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
 
-        self.name = 'Gyroid_Surface'
-
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
@@ -1375,8 +1370,6 @@ class DiamondSurface(Lattice):
 
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0):
         super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
-
-        self.name = 'Diamond'
 
     def evaluatePoint(self, x, y, z):
 
@@ -1408,8 +1401,6 @@ class PrimitiveSurface(Lattice):
 
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0):
         super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
-
-        self.name = 'Primitive'
 
     def evaluatePoint(self, x, y, z):
 
@@ -1443,7 +1434,6 @@ class Gyroid(Lattice):
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.6):
         super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
 
-        self.name = 'Solid_Gyroid'
         self.coordSys = 'car'
 
     def evaluatePoint(self, x, y, z):
@@ -1480,7 +1470,6 @@ class DoubleGyroidNetwork(Lattice):
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=1.2):
         super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
 
-        self.name = 'Network_Gyroid'
         self.coordSys = 'car'
 
     def evaluatePoint(self, x, y, z):
@@ -1516,7 +1505,6 @@ class GyroidNetwork(Lattice):
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.9):
         super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
 
-        self.name = 'Network_Gyroid'
         self.coordSys = 'car'
 
     def evaluatePoint(self, x, y, z):
@@ -1551,8 +1539,6 @@ class Diamond(Lattice):
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
         super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
 
-        self.name = 'Solid_Diamond'
-
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
@@ -1573,8 +1559,6 @@ class DiamondNetwork(Lattice):
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
         super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
 
-        self.name = 'Network_Diamond'
-
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
@@ -1593,8 +1577,6 @@ class Primitive(Lattice):
 
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.6):
         super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
-
-        self.name = 'Solid_Primitive'
 
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
@@ -1615,8 +1597,6 @@ class PrimitiveNetwork(Lattice):
 
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
         super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
-
-        self.name = 'Solid_Primitive'
 
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
@@ -1644,8 +1624,6 @@ class Pattern(Shape):
         self.xd = xd
         self.yd = yd
         self.zd = zd
-
-        self.name = 'Pattern'
 
         self.sourceShape = shape
 
@@ -1785,7 +1763,7 @@ def main():
 
     ds = DesignSpace()
 
-    Cube(ds).evaluateGrid()
+    Gyroid(ds).evaluateGrid()
 
 
 def profile(func):
