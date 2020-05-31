@@ -1,23 +1,25 @@
-import copy
-import cProfile
-import io
-import math
-import os
-import pstats
-import time
-import timeit
 
-import numexpr as ne
-import numpy as np
-import pymesh
-import skfmm
-import skimage
-import visvis as vv
-from numpy import linalg as LA
-from profilehooks import profile
-from skimage import measure
-from stl import mesh as msh
+import sys
+import timeit
+import time
+import pstats
+import os
+import math
+import io
+import cProfile
+import copy
+import perlin3d
 from visvis.functions import gca, isosurface
+from stl import mesh as msh
+from skimage import measure
+from profilehooks import profile
+from numpy import linalg as LA
+import visvis as vv
+import skimage
+import skfmm
+import pymesh
+import numpy as np
+import numexpr as ne
 
 
 class DesignSpace:
@@ -79,6 +81,8 @@ class Geometry:
         self.zStep = self.designSpace.zStep
 
         self.res = self.designSpace.res
+
+        self.name = self.__class__.__name__
 
     def compareLims(self):
 
@@ -596,8 +600,19 @@ class Sphere(Shape):
         '''
 
     def evaluateDistance(self, x, y, z):
+        '''
+        return np.sqrt(np.square(x - self.x) + np.square(y - self.y) + \
+            np.square(z-self.z)) - self.r
+        '''
 
-        return np.sqrt(np.square(x-self.x) + np.square(y-self.y) + np.square(z-self.z)) - self.r
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+        r = self.r
+
+        expr = 'sqrt((x-x0)**2 + (y-y0)**2 + (y-y0)**2) + r'
+
+        return ne.evaluate(expr)
 
 
 class HollowSphere(Shape):
@@ -1674,6 +1689,68 @@ class Pattern(Shape):
                       self.nz, self.xd, self.yd, self.zd)
 
 
+class Noise(Geometry):
+
+    def __init__(self, designSpace, shape, intensity=1.5):
+        super().__init__(designSpace)
+
+        self.shape = shape
+        self.designSpace = designSpace
+        self.intensity = 10000/intensity
+
+        self.xLims = self.shape.xLims
+        self.yLims = self.shape.yLims
+        self.zLims = self.shape.zLims
+
+    def evaluateGrid(self):
+
+        grid = np.random.randint(
+            100, size=self.designSpace.XX.shape)
+        intensity = self.intensity
+
+        self.noiseGrid = ne.evaluate('grid / intensity')
+
+        if not hasattr(self.shape, 'evaluatedGrid'):
+
+            self.shape.evaluateGrid()
+
+        shapeGrid = self.shape.evaluatedGrid
+        noiseGrid = self.noiseGrid
+
+        self.evaluatedGrid = ne.evaluate('shapeGrid + noiseGrid')
+
+
+class PerlinNoise(Geometry):
+
+    def __init__(self, designSpace, shape):
+        super().__init__(designSpace)
+
+        self.morph = 'Shape'
+
+        self.shape = shape
+        self.designSpace = designSpace
+
+        self.xLims = self.shape.xLims
+        self.yLims = self.shape.yLims
+        self.zLims = self.shape.zLims
+
+    @profile(immediate=True)
+    def evaluateGrid(self):
+
+        print('Generating Perlin Noise...')
+        self.noiseGrid = perlin3d.generate_perlin_noise_3d(
+            self.designSpace.XX.shape, (5, 5, 5))
+
+        if not hasattr(self.shape, 'evaluatedGrid'):
+
+            self.shape.evaluateGrid()
+
+        shapeGrid = self.shape.evaluatedGrid
+        noiseGrid = self.noiseGrid
+
+        self.evaluatedGrid = ne.evaluate('shapeGrid + (noiseGrid / 2)')
+
+
 def latticedSphereExample(outerRad=2, outerSkinThickness=0.1, innerRad=1, innerSkinThickness=0.1):
 
     ds = DesignSpace(res=300)
@@ -1744,11 +1821,11 @@ def wireLattice():
 
 def main():
 
-    ds = DesignSpace(res=500)
+    ds = DesignSpace(res=200)
 
-    shape = Torus(ds, r1=1.5, r2=0.2) + Cube(ds, x=1.25)
+    noise = PerlinNoise(ds, Cube(ds))
 
-    shape.previewModel()
+    noise.previewModel()
 
 
 def profile(func):
