@@ -24,7 +24,7 @@ import numexpr as ne
 
 class DesignSpace:
 
-    def __init__(self, res=100, xBounds=[-3, 3], yBounds=[-3, 3], zBounds=[-3, 3]):
+    def __init__(self, res=100, xBounds=[-2.1, 2.1], yBounds=[-2.1, 2.1], zBounds=[-2.1, 2.1]):
 
         self.xBounds = xBounds
         self.yBounds = yBounds
@@ -802,8 +802,8 @@ class Torus(Shape):
 
 class Cuboid(Shape):
 
-    def __init__(self, x=0, y=0, z=0, xd=1, yd=1.5, zd=1):
-        super().__init__(x, y, z, designSpace)
+    def __init__(self, designSpace, x=0, y=0, z=0, xd=1, yd=1.5, zd=1):
+        super().__init__(designSpace, x, y, z)
 
         self.xd = self.paramCheck(xd)
         self.yd = self.paramCheck(yd)
@@ -825,11 +825,27 @@ class Cuboid(Shape):
         return super().__str__() + f'\nDimensions(x, y, z): ({self.xd}, {self.yd}, {self.zd})'
 
     def evaluatePoint(self, x, y, z):
-
+        '''
         arr = [np.square(x - self.x) - (self.xd)**2, np.square(y - self.y) -
                (self.yd)**2, np.square(z - self.z) - (self.zd)**2]
 
-        return np.maximum(arr[0], arr[1])
+        return np.maximum(np.maximum(arr[0], arr[1]), arr[2])
+        '''
+
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+        xd = self.xd
+        yd = self.yd
+        zd = self.zd
+
+        arr1 = ne.evaluate('(x-x0)**2 - xd**2')
+        arr2 = ne.evaluate('(y-y0)**2 - yd**2')
+        arr3 = ne.evaluate('(z-z0)**2 - zd**2')
+
+        max1 = ne.evaluate('where(arr1>arr2, arr1, arr2)')
+
+        return ne.evaluate('where(max1>arr3, max1, arr3)')
 
     def evaluateDistance(self, x, y, z):
 
@@ -1823,9 +1839,28 @@ def main():
 
     ds = DesignSpace(res=200)
 
-    noise = PerlinNoise(ds, Cube(ds))
+    cuboid = Cuboid(ds, xd=2, yd=2, zd=0.5)
 
-    noise.previewModel()
+    refinedLattice = Gyroid(ds, nx=2, ny=2, nz=2, t=0.8)
+
+    refinedLattice.evaluateGrid()
+
+    refinedLattice.evaluatedGrid
+
+    sphere = Sphere(ds, r=1.5)
+
+    sphere.evaluateGrid()
+
+    sphere.evaluatedGrid = np.where(
+        sphere.evaluatedGrid > 0, 0, sphere.evaluatedGrid)
+
+    refinedLattice.evaluatedGrid -= sphere.evaluatedGrid / 10
+
+    shape = cuboid / refinedLattice
+
+    shape.evaluateGrid()
+
+    shape.saveMesh('refinedGyroid', fileFormat='obj', quality='high')
 
 
 def profile(func):
