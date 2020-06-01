@@ -1836,9 +1836,9 @@ def wireLattice():
     pymesh.save_mesh('tiledMesh.obj', tiledMesh)
 
 
-def main():
+def latticeRefinementExample():
 
-    ds = DesignSpace(res=400)
+    ds = DesignSpace(res=300)
 
     cuboid = Cuboid(ds, xd=2, yd=2, zd=0.5)
 
@@ -1855,13 +1855,18 @@ def main():
     sphere.evaluatedGrid = np.where(
         sphere.evaluatedGrid > 0, 0, sphere.evaluatedGrid)
 
-    refinedLattice.evaluatedGrid -= sphere.evaluatedGrid / 7
+    refinedLattice.evaluatedGrid -= sphere.evaluatedGrid / 6
 
     shape = cuboid / refinedLattice
 
     shape.evaluateGrid()
 
     shape.previewModel()
+
+
+def main():
+
+    latticeRefinementExample()
 
 
 def profile(func):
