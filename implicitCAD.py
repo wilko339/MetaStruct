@@ -8,7 +8,7 @@ import math
 import io
 import cProfile
 import copy
-#import perlin3d
+import perlin3d
 from visvis.functions import gca, isosurface
 from stl import mesh as msh
 from skimage import measure
@@ -1750,7 +1750,7 @@ class PerlinNoise(Geometry):
         self.yLims = self.shape.yLims
         self.zLims = self.shape.zLims
 
-    '''
+    @profile(immediate=True)
     def evaluateGrid(self):
 
         print('Generating Perlin Noise...')
@@ -1765,7 +1765,6 @@ class PerlinNoise(Geometry):
         noiseGrid = self.noiseGrid
 
         self.evaluatedGrid = ne.evaluate('shapeGrid + (noiseGrid / 2)')
-        '''
 
 
 def latticedSphereExample(outerRad=2, outerSkinThickness=0.1, innerRad=1, innerSkinThickness=0.1):
@@ -1838,7 +1837,7 @@ def wireLattice():
 
 def main():
 
-    ds = DesignSpace(res=400)
+    ds = DesignSpace(res=200)
 
     cuboid = Cuboid(ds, xd=2, yd=2, zd=0.5)
 
@@ -1855,13 +1854,13 @@ def main():
     sphere.evaluatedGrid = np.where(
         sphere.evaluatedGrid > 0, 0, sphere.evaluatedGrid)
 
-    refinedLattice.evaluatedGrid -= sphere.evaluatedGrid / 7
+    refinedLattice.evaluatedGrid -= sphere.evaluatedGrid / 10
 
     shape = cuboid / refinedLattice
 
     shape.evaluateGrid()
 
-    shape.previewModel()
+    shape.saveMesh('refinedGyroid', fileFormat='obj', quality='high')
 
 
 def profile(func):
