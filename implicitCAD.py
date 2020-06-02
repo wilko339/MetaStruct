@@ -755,8 +755,8 @@ class HollowCube(Shape):
 
     def evaluatePoint(self, x, y, z):
 
-        box = Cube(self.x, self.y, self.z, self.dim) - \
-            Cube(self.x, self.y, self.z, self.dim - self.t)
+        box = Cube(self.designSpace, self.x, self.y, self.z, self.dim) - \
+            Cube(self.designSpace, self.x, self.y, self.z, self.dim - self.t)
 
         return box.evaluatePoint(x, y, z)
 
@@ -1148,7 +1148,14 @@ class Difference(Boolean):
 
                 shape.evaluateGrid()
 
-        return np.maximum(self.shape1.evaluatedGrid, -self.shape2.evaluatedGrid)
+        g1 = self.shape1.evaluatedGrid
+        g2 = -self.shape2.evaluatedGrid
+
+        expr = 'where(g1>g2, g1, g2)'
+
+        return ne.evaluate(expr)
+
+        # return np.maximum(self.shape1.evaluatedGrid, -self.shape2.evaluatedGrid)
 
 
 class Add(Boolean):
@@ -1738,7 +1745,7 @@ class Noise(Geometry):
 
 class PerlinNoise(Geometry):
 
-    def __init__(self, designSpace, shape):
+    def __init__(self, designSpace, shape, freq=(8, 8, 8)):
         super().__init__(designSpace)
 
         self.morph = 'Shape'
@@ -1750,21 +1757,43 @@ class PerlinNoise(Geometry):
         self.yLims = self.shape.yLims
         self.zLims = self.shape.zLims
 
-    @profile(immediate=True)
+        self.freq = freq
+
     def evaluateGrid(self):
 
         print('Generating Perlin Noise...')
-        self.noiseGrid = perlin3d.generate_perlin_noise_3d(
-            self.designSpace.XX.shape, (5, 5, 5))
+        self.evaluatedGrid = perlin3d.generate_perlin_noise_3d(
+            self.designSpace.XX.shape, self.freq)
+
+    def noiseShape(self):
+
+        if not hasattr(self, 'evaluatedGrid'):
+
+            self.evaluateGrid()
 
         if not hasattr(self.shape, 'evaluatedGrid'):
 
             self.shape.evaluateGrid()
 
-        shapeGrid = self.shape.evaluatedGrid
-        noiseGrid = self.noiseGrid
+        g1 = self.shape.evaluatedGrid
+        g2 = self.evaluatedGrid
 
-        self.evaluatedGrid = ne.evaluate('shapeGrid + (noiseGrid / 2)')
+        expr = 'g1 + (g2 * 1.5)'
+
+        self.evaluatedGrid = ne.evaluate(expr)
+
+    def noiseLattice(self):
+
+        if not hasattr(self, 'evaluatedGrid'):
+
+            self.evaluateGrid()
+
+        g1 = self.evaluatedGrid
+        g2 = -(self.evaluatedGrid + 0.1)
+
+        expr = 'where(g1>g2, g1, g2)'
+
+        self.evaluatedGrid = ne.evaluate(expr)
 
 
 def latticedSphereExample(outerRad=2, outerSkinThickness=0.1, innerRad=1, innerSkinThickness=0.1):
@@ -1837,11 +1866,7 @@ def wireLattice():
 
 def latticeRefinementExample():
 
-<<<<<<< HEAD
-    ds = DesignSpace(res=200)
-=======
     ds = DesignSpace(res=300)
->>>>>>> e4c1392e8e75b1648a3720be39ab7aae26a9af41
 
     cuboid = Cuboid(ds, xd=2, yd=2, zd=0.5)
 
@@ -1858,11 +1883,7 @@ def latticeRefinementExample():
     sphere.evaluatedGrid = np.where(
         sphere.evaluatedGrid > 0, 0, sphere.evaluatedGrid)
 
-<<<<<<< HEAD
-    refinedLattice.evaluatedGrid -= sphere.evaluatedGrid / 10
-=======
     refinedLattice.evaluatedGrid -= sphere.evaluatedGrid / 6
->>>>>>> e4c1392e8e75b1648a3720be39ab7aae26a9af41
 
     shape = cuboid / refinedLattice
 
@@ -1873,7 +1894,21 @@ def latticeRefinementExample():
 
 def main():
 
-    latticeRefinementExample()
+    ds = DesignSpace(res=240)
+
+    cube = Sphere(ds, r=1.9)
+
+    skin = HollowSphere(ds, r=2, t=0.1)
+
+    noise = PerlinNoise(ds, cube)
+
+    noise.noiseLattice()
+
+    shape = cube / noise
+
+    shape = SmoothUnion(skin, shape, blend=7)
+
+    shape.previewModel(clip='x')
 
 
 def profile(func):
