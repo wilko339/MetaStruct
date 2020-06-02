@@ -1835,9 +1835,13 @@ def wireLattice():
     pymesh.save_mesh('tiledMesh.obj', tiledMesh)
 
 
-def main():
+def latticeRefinementExample():
 
+<<<<<<< HEAD
     ds = DesignSpace(res=200)
+=======
+    ds = DesignSpace(res=300)
+>>>>>>> e4c1392e8e75b1648a3720be39ab7aae26a9af41
 
     cuboid = Cuboid(ds, xd=2, yd=2, zd=0.5)
 
@@ -1854,13 +1858,22 @@ def main():
     sphere.evaluatedGrid = np.where(
         sphere.evaluatedGrid > 0, 0, sphere.evaluatedGrid)
 
+<<<<<<< HEAD
     refinedLattice.evaluatedGrid -= sphere.evaluatedGrid / 10
+=======
+    refinedLattice.evaluatedGrid -= sphere.evaluatedGrid / 6
+>>>>>>> e4c1392e8e75b1648a3720be39ab7aae26a9af41
 
     shape = cuboid / refinedLattice
 
     shape.evaluateGrid()
 
     shape.saveMesh('refinedGyroid', fileFormat='obj', quality='high')
+
+
+def main():
+
+    latticeRefinementExample()
 
 
 def profile(func):
