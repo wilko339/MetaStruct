@@ -428,6 +428,22 @@ class Geometry:
 
         pass
 
+    def convertToCylindrical(self):
+
+        XX = self.XX
+        YY = self.YY
+        ZZ = self.ZZ
+
+        r = ne.evaluate('sqrt(XX**2 + YY**2 + ZZ**2)')
+        az = ne.evaluate('arctan(YY/XX)')
+        inc = ne.evaluate('arccos(ZZ/r)')
+
+        self.XX = ne.evaluate('sqrt(XX**2 + YY**2)')
+        self.YY = ne.evaluate('arctan(YY/XX)')
+        #self.ZZ = ne.evaluate('arccos(ZZ/r)')
+
+        self.evaluatedGrid = self.evaluatePoint(self.XX, self.YY, self.ZZ)
+
 
 class Shape(Geometry):
 
@@ -865,8 +881,8 @@ class Cuboid(Shape):
 
 class Cylinder(Shape):
 
-    def __init__(self, x=0, y=0, z=0, r1=1, r2=1, l=1, ax='z'):
-        super().__init__(x, y, z, designSpace)
+    def __init__(self, designSpace, x=0, y=0, z=0, r1=1, r2=1, l=1, ax='z'):
+        super().__init__(designSpace, x, y, z)
 
         self.r1 = self.paramCheck(r1)
         self.r2 = self.paramCheck(r2)
@@ -990,12 +1006,12 @@ class Boolean(Geometry):
         self.z = (shape1.x + shape2.z) / 2
 
         self.name = shape1.name + '_' + shape2.name
-
+        '''
         for shape in self.shapes:
 
             if not hasattr(shape, 'evaluatedGrid'):
 
-                shape.evaluateGrid()
+                shape.evaluateGrid()'''
 
     def setLims(self):
 
@@ -1291,13 +1307,15 @@ class Lattice(Geometry):
         self.y = self.paramCheck(y)
         self.z = self.paramCheck(z)
 
-        self.nx = self.paramCheck(nx)
-        self.ny = self.paramCheck(ny)
-        self.nz = self.paramCheck(nz)
-        self.lx = self.paramCheck(lx)
-        self.ly = self.paramCheck(ly)
-        self.lz = self.paramCheck(lz)
-        self.t = self.paramCheck(t)
+        self.nx = nx
+        self.ny = ny
+        self.nz = nz
+
+        self.lx = lx
+        self.ly = ly
+        self.lz = lz
+
+        self.t = t
 
         self.kx = 2 * math.pi * (self.nx / self.lx)
         self.ky = 2 * math.pi * (self.ny / self.ly)
@@ -1353,6 +1371,33 @@ class Lattice(Geometry):
         except:
             raise ValueError(f'{n} is not a number.')
 
+    def convertToCylindrical(self):
+
+        XX = self.XX
+        YY = self.YY
+        ZZ = self.ZZ
+
+        self.XX = ne.evaluate('sqrt(XX**2 + YY**2)')
+        self.YY = ne.evaluate('arctan2(YY,XX)')
+
+        self.evaluatedGrid = self.evaluatePoint(self.XX, self.YY, self.ZZ)
+
+    def convertToSpherical(self):
+
+        XX = self.XX
+        YY = self.YY
+        ZZ = self.ZZ
+
+        r = ne.evaluate('sqrt(XX**2 + YY**2 + ZZ**2)')
+        az = ne.evaluate('arctan2(YY,XX)')
+        inc = ne.evaluate('arccos(ZZ/r)')
+
+        self.XX = ne.evaluate('sqrt(XX**2 + YY**2 + ZZ**2)')
+        self.YY = ne.evaluate('arctan2(sqrt(XX**2 + YY**2),ZZ)')
+        self.ZZ = ne.evaluate('arctan2(YY,XX)')
+
+        self.evaluatedGrid = self.evaluatePoint(self.XX, self.YY, self.ZZ)
+
 
 class GyroidSurface(Lattice):
     """Gyroid Lattice Object:\n\n\
@@ -1379,12 +1424,6 @@ class GyroidSurface(Lattice):
                 sin(kz*(z-z0))*cos(kx*(x-x0)) - t '
 
         return ne.evaluate(expr)
-        '''
-        return np.sin(self.kx*(x-self.x))*np.cos(self.ky*(y-self.y)) + \
-            np.sin(self.ky*(y-self.y))*np.cos(self.kz*(z-self.z)) + \
-            np.sin(self.kz*(z-self.z)) * \
-            np.cos(self.kx*(x-self.x)) - self.t
-        '''
 
 
 class DiamondSurface(Lattice):
@@ -1439,11 +1478,44 @@ class PrimitiveSurface(Lattice):
 
         return ne.evaluate(expr)
 
-        '''
-        return -(np.cos(self.kx*(x-self.x)) +
-                 np.cos(self.ky*(y-self.y)) +
-                 np.cos(self.kz*(z-self.z)) - self.t)
-        '''
+
+class CompositeLatticeSurface(Geometry):
+
+    def __init__(self, lat1, lat2, blendMatrix=0.5):
+
+        if lat1.designSpace.XX is not lat2.designSpace.XX:
+            if lat1.designSpace.YY is not lat2.designSpace.YY:
+                if lat1.designSpace.ZZ is not lat2.designSpace.ZZ:
+                    raise ValueError(
+                        f'{shape1.name} and {shape2.name} are defined in different design spaces.')
+
+        super().__init__(lat1.designSpace)
+        self.designSpace = lat1.designSpace
+        self.lat1 = lat1
+        self.lat2 = lat2
+        self.lattices = [lat1, lat2]
+
+        self.xLims = np.array([-1, 1])
+        self.yLims = np.array([-1, 1])
+        self.zLims = np.array([-1, 1])
+        self.name = f'{lat1.name}_{lat2.name}'
+        self.morph = self.lat1.morph
+
+        self.blendMatrix = blendMatrix
+
+    def evaluatePoint(self, x, y, z):
+
+        for lat in self.lattices:
+
+            if not hasattr(lat, 'evaluatedGrid'):
+
+                lat.evaluateGrid()
+
+        blend = self.blendMatrix
+        l1 = self.lat1.evaluatedGrid
+        l2 = self.lat2.evaluatedGrid
+
+        return ne.evaluate('blend * l1 + (1- blend) * l2')
 
 
 class Gyroid(Lattice):
@@ -1478,6 +1550,12 @@ class Gyroid(Lattice):
                                 self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
             GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
                           self.nz, self.lx, self.ly, self.lz, -self.t)
+
+        for shape in lattice.shapes:
+
+            shape.XX = self.XX
+            shape.YY = self.YY
+            shape.ZZ = self.ZZ
 
         return lattice.evaluatePoint(x, y, z)
 
@@ -1894,21 +1972,26 @@ def latticeRefinementExample():
 
 def main():
 
-    ds = DesignSpace(res=240)
+    ds = DesignSpace(res=200)
 
-    cube = Sphere(ds, r=1.9)
+    lat1 = Gyroid(ds)
 
-    skin = HollowSphere(ds, r=2, t=0.1)
+    xx = lat1.XX
 
-    noise = PerlinNoise(ds, cube)
+    pi = math.pi
 
-    noise.noiseLattice()
+    minXX = xx.min()
+    maxXX = xx.max()
 
-    shape = cube / noise
+    xxNorm = ne.evaluate('(xx-minXX)/(maxXX-minXX)')
 
-    shape = SmoothUnion(skin, shape, blend=7)
+    lat1.nx = xxNorm * 1.2
 
-    shape.previewModel(clip='x')
+    lat1.t = ne.evaluate('(xxNorm + 1)/3')
+
+    lat1 = Cube(ds, dim=2) / lat1
+
+    lat1.previewModel()
 
 
 def profile(func):
