@@ -8,7 +8,7 @@ import math
 import io
 import cProfile
 import copy
-import perlin3d
+#import perlin3d
 from visvis.functions import gca, isosurface
 from stl import mesh as msh
 from skimage import measure
@@ -841,12 +841,6 @@ class Cuboid(Shape):
         return super().__str__() + f'\nDimensions(x, y, z): ({self.xd}, {self.yd}, {self.zd})'
 
     def evaluatePoint(self, x, y, z):
-        '''
-        arr = [np.square(x - self.x) - (self.xd)**2, np.square(y - self.y) -
-               (self.yd)**2, np.square(z - self.z) - (self.zd)**2]
-
-        return np.maximum(np.maximum(arr[0], arr[1]), arr[2])
-        '''
 
         x0 = self.x
         y0 = self.y
@@ -961,12 +955,6 @@ class Cylinder(Shape):
 
             return np.maximum(arr[0], arr[1])
 
-    # def evaluateDistance(self, x, y, z):
-
-        # if self.ax == 'z':
-
-            # return np.maximum(np.square(x) + np.square(y) - self.r)
-
 
 class Boolean(Geometry):
 
@@ -1006,12 +994,6 @@ class Boolean(Geometry):
         self.z = (shape1.x + shape2.z) / 2
 
         self.name = shape1.name + '_' + shape2.name
-        '''
-        for shape in self.shapes:
-
-            if not hasattr(shape, 'evaluatedGrid'):
-
-                shape.evaluateGrid()'''
 
     def setLims(self):
 
@@ -1170,8 +1152,6 @@ class Difference(Boolean):
         expr = 'where(g1>g2, g1, g2)'
 
         return ne.evaluate(expr)
-
-        # return np.maximum(self.shape1.evaluatedGrid, -self.shape2.evaluatedGrid)
 
 
 class Add(Boolean):
@@ -1447,14 +1427,6 @@ class DiamondSurface(Lattice):
                 cos(kx * (x - x0)) * cos(ky * (y - y0)) * cos(kz * (z - z0)) - t'
 
         return ne.evaluate(expr)
-
-        '''
-        return np.sin(self.kx*(x-self.x))*np.sin(self.ky*(y-self.y))*np.sin(self.kz*(z-self.z)) + \
-            np.sin(self.kx*(x-self.x))*np.cos(self.ky*(y-self.y))*np.cos(self.kz*(z-self.z)) + \
-            np.cos(self.kx*(x-self.x))*np.sin(self.ky*(y-self.y))*np.cos(self.kz*(z - self.z)) + \
-            np.cos(self.kx*(x-self.x))*np.cos(self.ky*(y-self.y)) * np.cos(self.kz*(z-self.z)) - \
-            self.t
-        '''
 
 
 class PrimitiveSurface(Lattice):
@@ -1972,24 +1944,15 @@ def latticeRefinementExample():
 
 def main():
 
-    ds = DesignSpace(res=200)
+    ds = DesignSpace(res=300)
 
     lat1 = Gyroid(ds)
 
-    xx = lat1.XX
+    lat1.nz = lat1.ZZ / 4
 
-    pi = math.pi
+    lat1.convertToCylindrical()
 
-    minXX = xx.min()
-    maxXX = xx.max()
-
-    xxNorm = ne.evaluate('(xx-minXX)/(maxXX-minXX)')
-
-    lat1.nx = xxNorm * 1.2
-
-    lat1.t = ne.evaluate('(xxNorm + 1)/3')
-
-    lat1 = Cube(ds, dim=2) / lat1
+    lat1 = Cylinder(ds, r1=2, r2=2, l=2) / lat1
 
     lat1.previewModel()
 
