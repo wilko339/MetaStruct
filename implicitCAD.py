@@ -1,4 +1,20 @@
 
+import perlin3d
+from smt.surrogate_models import RBF
+import smt
+import scipy
+import numexpr as ne
+import numpy as np
+import pymesh
+import skfmm
+import skimage
+import visvis as vv
+from numpy import linalg as LA
+from profilehooks import profile
+from skimage import measure
+from stl import mesh as msh
+from visvis.functions import gca, isosurface
+import timeit
 import copy
 import cProfile
 import io
@@ -7,24 +23,7 @@ import os
 import pstats
 import sys
 import time
-import timeit
-
-import numexpr as ne
-import numpy as np
-import pymesh
-import scipy
-import skfmm
-import skimage
-import smt
-from smt.surrogate_models import RBF
-import visvis as vv
-from numpy import linalg as LA
-from profilehooks import profile
-from skimage import measure
-from stl import mesh as msh
-from visvis.functions import gca, isosurface
-
-import perlin3d
+# import perlin3d
 
 
 class DesignSpace:
@@ -830,12 +829,6 @@ class Cuboid(Shape):
         return super().__str__() + f'\nDimensions(x, y, z): ({self.xd}, {self.yd}, {self.zd})'
 
     def evaluatePoint(self, x, y, z):
-        '''
-        arr = [np.square(x - self.x) - (self.xd)**2, np.square(y - self.y) -
-               (self.yd)**2, np.square(z - self.z) - (self.zd)**2]
-
-        return np.maximum(np.maximum(arr[0], arr[1]), arr[2])
-        '''
 
         x0 = self.x
         y0 = self.y
@@ -949,12 +942,6 @@ class Cylinder(Shape):
                    self.r2**2 - 1, np.square(y - self.y) - self.l**2]
 
             return np.maximum(arr[0], arr[1])
-
-    # def evaluateDistance(self, x, y, z):
-
-        # if self.ax == 'z':
-
-            # return np.maximum(np.square(x) + np.square(y) - self.r)
 
 
 class Boolean(Geometry):
@@ -1161,8 +1148,6 @@ class Difference(Boolean):
         expr = 'where(g1>g2, g1, g2)'
 
         return ne.evaluate(expr)
-
-        # return np.maximum(self.shape1.evaluatedGrid, -self.shape2.evaluatedGrid)
 
 
 class Add(Boolean):
