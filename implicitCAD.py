@@ -432,6 +432,33 @@ class Geometry:
 
         pass
 
+    def convertToCylindrical(self):
+
+        XX = self.XX
+        YY = self.YY
+        ZZ = self.ZZ
+
+        r = ne.evaluate('sqrt(XX**2 + YY**2 + ZZ**2)')
+        az = ne.evaluate('arctan2(YY, XX)')
+        inc = ne.evaluate('arccos(ZZ/r)')
+
+        self.XX = r
+        self.YY = az
+
+        self.evaluatedGrid = self.evaluatePoint(self.XX, self.YY, self.ZZ)
+
+    def convertToSpherical(self):
+
+        XX = self.XX
+        YY = self.YY
+        ZZ = self.ZZ
+
+        self.XX = ne.evaluate('sqrt(XX**2 + YY**2 + ZZ**2)')
+        self.YY = ne.evaluate('arctan2(sqrt(XX**2 + YY**2),ZZ)')
+        self.ZZ = ne.evaluate('arctan2(YY,XX)')
+
+        self.evaluatedGrid = self.evaluatePoint(self.XX, self.YY, self.ZZ)
+
 
 class Shape(Geometry):
 
@@ -1347,28 +1374,10 @@ class Lattice(Geometry):
         except:
             raise ValueError(f'{n} is not a number.')
 
-    def convertToCylindrical(self):
 
-        XX = self.XX
-        YY = self.YY
-        ZZ = self.ZZ
-
-        self.XX = ne.evaluate('sqrt(XX**2 + YY**2)')
-        self.YY = ne.evaluate('arctan2(YY,XX)')
-
-        self.evaluatedGrid = self.evaluatePoint(self.XX, self.YY, self.ZZ)
-
-    def convertToSpherical(self):
-
-        XX = self.XX
-        YY = self.YY
-        ZZ = self.ZZ
-
-        self.XX = ne.evaluate('sqrt(XX**2 + YY**2 + ZZ**2)')
-        self.YY = ne.evaluate('arctan2(sqrt(XX**2 + YY**2),ZZ)')
-        self.ZZ = ne.evaluate('arctan2(YY,XX)')
-
-        self.evaluatedGrid = self.evaluatePoint(self.XX, self.YY, self.ZZ)
+'''
+    
+'''
 
 
 class GyroidSurface(Lattice):
@@ -1553,6 +1562,12 @@ class Gyroid(Lattice):
                                 self.ny, self.nz, self.lx, self.ly, self.lz, vfHigh) - \
             GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
                           self.nz, self.lx, self.ly, self.lz, vfLow)
+
+        for shape in lattice.shapes:
+
+            shape.XX = self.XX
+            shape.YY = self.YY
+            shape.ZZ = self.ZZ
 
         return lattice.evaluatePoint(x, y, z)
 
@@ -2008,9 +2023,9 @@ def createModifierArray(shape, minVal=0., maxVal=1., dim='x', func=None):
 
 def main():
 
-    ds = DesignSpace(res=5)
+    ds = DesignSpace(res=300)
 
-    lattice = Gyroid(ds)
+    lattice = BCC(ds, nx=3, ny=3, nz=3)
     '''
     vf = createModifierArray(lattice, 0.2, 0.9, dim='x')
     nz = createModifierArray(lattice, 1, 2, dim='z')
@@ -2019,14 +2034,15 @@ def main():
 
     lattice.nz = nz
     '''
+    lattice.convertToSpherical()
 
-    shape = Cube(ds, dim=2) / lattice
+    shape = Sphere(ds, r=2) / lattice
 
-    shape.evaluateGrid()
+    shape -= Sphere(ds, r=1.5)
 
-    shape.shape2.convertToSpherical()
+    shape -= Cylinder(ds, l=2)
 
-    shape.previewModel()
+    shape.previewModel(clip='x')
 
 
 def profile(func):
