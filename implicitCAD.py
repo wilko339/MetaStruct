@@ -1,25 +1,30 @@
 
-import sys
-import timeit
-import time
-import pstats
-import os
-import math
-import io
-import cProfile
 import copy
-import perlin3d
-from visvis.functions import gca, isosurface
-from stl import mesh as msh
-from skimage import measure
-from profilehooks import profile
-from numpy import linalg as LA
-import visvis as vv
-import skimage
-import skfmm
-import pymesh
-import numpy as np
+import cProfile
+import io
+import math
+import os
+import pstats
+import sys
+import time
+import timeit
+
 import numexpr as ne
+import numpy as np
+import pymesh
+import scipy
+import skfmm
+import skimage
+import smt
+from smt.surrogate_models import RBF
+import visvis as vv
+from numpy import linalg as LA
+from profilehooks import profile
+from skimage import measure
+from stl import mesh as msh
+from visvis.functions import gca, isosurface
+
+import perlin3d
 
 
 class DesignSpace:
@@ -427,22 +432,6 @@ class Geometry:
     def wireLattice(self):
 
         pass
-
-    def convertToCylindrical(self):
-
-        XX = self.XX
-        YY = self.YY
-        ZZ = self.ZZ
-
-        r = ne.evaluate('sqrt(XX**2 + YY**2 + ZZ**2)')
-        az = ne.evaluate('arctan(YY/XX)')
-        inc = ne.evaluate('arccos(ZZ/r)')
-
-        self.XX = ne.evaluate('sqrt(XX**2 + YY**2)')
-        self.YY = ne.evaluate('arctan(YY/XX)')
-        #self.ZZ = ne.evaluate('arccos(ZZ/r)')
-
-        self.evaluatedGrid = self.evaluatePoint(self.XX, self.YY, self.ZZ)
 
 
 class Shape(Geometry):
@@ -1006,12 +995,6 @@ class Boolean(Geometry):
         self.z = (shape1.x + shape2.z) / 2
 
         self.name = shape1.name + '_' + shape2.name
-        '''
-        for shape in self.shapes:
-
-            if not hasattr(shape, 'evaluatedGrid'):
-
-                shape.evaluateGrid()'''
 
     def setLims(self):
 
@@ -1147,8 +1130,16 @@ class Intersection(Boolean):
 
                 shape.evaluateGrid()
 
+        g1 = self.shape1.evaluatedGrid
+        g2 = self.shape2.evaluatedGrid
+
+        expr = 'where(g1>g2, g1, g2)'
+
+        self.evaluatedGrid = ne.evaluate(expr)
+        '''
         self.evaluatedGrid = np.maximum(
             self.shape1.evaluatedGrid, self.shape2.evaluatedGrid)
+        '''
 
 
 class Difference(Boolean):
@@ -1296,7 +1287,7 @@ class Lattice(Geometry):
 
     morph = 'Lattice'
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0):
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.5):
         super().__init__(designSpace)
 
         self.transform = None
@@ -1315,7 +1306,7 @@ class Lattice(Geometry):
         self.ly = ly
         self.lz = lz
 
-        self.t = t
+        self.vf = vf
 
         self.kx = 2 * math.pi * (self.nx / self.lx)
         self.ky = 2 * math.pi * (self.ny / self.ly)
@@ -1388,10 +1379,6 @@ class Lattice(Geometry):
         YY = self.YY
         ZZ = self.ZZ
 
-        r = ne.evaluate('sqrt(XX**2 + YY**2 + ZZ**2)')
-        az = ne.evaluate('arctan2(YY,XX)')
-        inc = ne.evaluate('arccos(ZZ/r)')
-
         self.XX = ne.evaluate('sqrt(XX**2 + YY**2 + ZZ**2)')
         self.YY = ne.evaluate('arctan2(sqrt(XX**2 + YY**2),ZZ)')
         self.ZZ = ne.evaluate('arctan2(YY,XX)')
@@ -1403,10 +1390,17 @@ class GyroidSurface(Lattice):
     """Gyroid Lattice Object:\n\n\
     (x, y, z)\t\t: Centre of Lattice. Adjust to Translate.\n\n\
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
-    (lx, ly, lz)\t: Length of unit cell in each direction."""
+    (lx, ly, lz)\t: Length of unit cell in each direction. """
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0):
-        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+    # https://tinyurl.com/ybjoblaw
+
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.5):
+
+        self.vf = vf
+
+        t = (vf-0.501)/0.3325
+
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
 
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
@@ -1417,7 +1411,8 @@ class GyroidSurface(Lattice):
         kx = self.kx
         ky = self.ky
         kz = self.kz
-        t = self.t
+        vf = self.vf
+        t = ne.evaluate('(vf-0.501)/0.3325')
 
         expr = 'sin(kx*(x-x0))*cos(ky*(y-y0)) + \
                 sin(ky * (y - y0)) * cos(kz * (z - z0)) + \
@@ -1426,10 +1421,45 @@ class GyroidSurface(Lattice):
         return ne.evaluate(expr)
 
 
+class BCC(Lattice):
+    """BCC Lattice Object:\n\n\
+    (x, y, z)\t\t: Centre of Lattice. Adjust to Translate.\n\n\
+    (nx, ny, nz)\t: Number of unit cells per length.\n\n\
+    (lx, ly, lz)\t: Length of unit cell in each direction. """
+
+    # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6317040/pdf/materials-11-02411.pdf
+
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.2):
+
+        self.vf = vf
+
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
+
+    def evaluatePoint(self, x, y, z):
+        """Returns the function value at point (x, y, z)."""
+
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+        kx = self.kx
+        ky = self.ky
+        kz = self.kz
+        vf = self.vf
+        vf = ne.evaluate('vf*100')
+
+        t = ne.evaluate('-8.04119e-8*vf**4 + 1.71079e-5*vf**3 - \
+            0.0014808*vf**2 - 0.0136365*vf + 2.96255414')
+
+        expr = 'cos(2*kx*x) + cos(2*ky*y) + cos(2*kz*z) - \
+            2*(cos(kx*x)*cos(ky*y) + cos(ky*y)*cos(kz*z) + cos(kz*z)*cos(kx*x)) + t'
+
+        return ne.evaluate(expr)
+
+
 class DiamondSurface(Lattice):
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0):
-        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.5):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
 
     def evaluatePoint(self, x, y, z):
 
@@ -1439,7 +1469,8 @@ class DiamondSurface(Lattice):
         kx = self.kx
         ky = self.ky
         kz = self.kz
-        t = self.t
+        vf = self.vf
+        t = ne.evaluate('2.691*vf -1.333')
 
         expr = 'sin(kx * (x - x0)) * sin(ky * (y - y0)) * sin(kz * (z - z0)) + \
                 sin(kx * (x - x0)) * cos(ky * (y - y0)) * cos(kz * (z - z0)) + \
@@ -1448,19 +1479,11 @@ class DiamondSurface(Lattice):
 
         return ne.evaluate(expr)
 
-        '''
-        return np.sin(self.kx*(x-self.x))*np.sin(self.ky*(y-self.y))*np.sin(self.kz*(z-self.z)) + \
-            np.sin(self.kx*(x-self.x))*np.cos(self.ky*(y-self.y))*np.cos(self.kz*(z-self.z)) + \
-            np.cos(self.kx*(x-self.x))*np.sin(self.ky*(y-self.y))*np.cos(self.kz*(z - self.z)) + \
-            np.cos(self.kx*(x-self.x))*np.cos(self.ky*(y-self.y)) * np.cos(self.kz*(z-self.z)) - \
-            self.t
-        '''
-
 
 class PrimitiveSurface(Lattice):
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0):
-        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.9):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
 
     def evaluatePoint(self, x, y, z):
 
@@ -1470,11 +1493,11 @@ class PrimitiveSurface(Lattice):
         kx = self.kx
         ky = self.ky
         kz = self.kz
-        t = self.t
+        t = self.vf
 
         expr = '-(cos(kx*(x-x0)) + \
                  cos(ky*(y-y0)) + \
-                 cos(kz * (z - z0)) - t) '
+                 cos(kz*(z-z0)) - t) '
 
         return ne.evaluate(expr)
 
@@ -1524,38 +1547,27 @@ class Gyroid(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.6):
-        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.5):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
 
         self.coordSys = 'car'
 
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
-        if self.coordSys == 'car':
+        if self.transform is not None:
 
-            if self.transform is not None:
+            x, y, z = self.transformInputs(x, y, z)
 
-                x, y, z = self.transformInputs(x, y, z)
+        vf = self.vf
 
-        if self.coordSys == 'cyl':
-
-            r = np.sqrt(np.square(x) + np.square(y))
-            theta = np.arctan(y/z)
-
-            x = r * np.cos(theta)
-            y = r * np.sin(theta)
+        vfHigh = ne.evaluate('0.5 + vf/2')
+        vfLow = ne.evaluate('0.5 - vf/2')
 
         lattice = GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx,
-                                self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
+                                self.ny, self.nz, self.lx, self.ly, self.lz, vfHigh) - \
             GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
-                          self.nz, self.lx, self.ly, self.lz, -self.t)
-
-        for shape in lattice.shapes:
-
-            shape.XX = self.XX
-            shape.YY = self.YY
-            shape.ZZ = self.ZZ
+                          self.nz, self.lx, self.ly, self.lz, vfLow)
 
         return lattice.evaluatePoint(x, y, z)
 
@@ -1566,8 +1578,8 @@ class DoubleGyroidNetwork(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=1.2):
-        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.2):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
 
         self.coordSys = 'car'
 
@@ -1588,9 +1600,15 @@ class DoubleGyroidNetwork(Lattice):
             x = r * np.cos(theta)
             y = r * np.sin(theta)
 
-        lattice = GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
+        vf = 1 - self.vf
+
+        vfHigh = ne.evaluate('0.5 + vf/2')
+        vfLow = ne.evaluate('0.5 - vf/2')
+
+        lattice = GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx,
+                                self.ny, self.nz, self.lx, self.ly, self.lz, vfHigh) - \
             GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
-                          self.nz, self.lx, self.ly, self.lz, -self.t)
+                          self.nz, self.lx, self.ly, self.lz, vfLow)
 
         return -lattice.evaluatePoint(x, y, z)
 
@@ -1601,8 +1619,8 @@ class GyroidNetwork(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.9):
-        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.2):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
 
         self.coordSys = 'car'
 
@@ -1623,8 +1641,10 @@ class GyroidNetwork(Lattice):
             x = r * np.cos(theta)
             y = r * np.sin(theta)
 
+        vf = 1 - self.vf
+
         lattice = GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx,
-                                self.ny, self.nz, self.lx, self.ly, self.lz, self.t)
+                                self.ny, self.nz, self.lx, self.ly, self.lz, vf)
 
         return -lattice.evaluatePoint(x, y, z)
 
@@ -1635,16 +1655,21 @@ class Diamond(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
-        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.2):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
 
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
+        vf = self.vf
+
+        vfHigh = ne.evaluate('0.5 + vf/2')
+        vfLow = ne.evaluate('0.5 - vf/2')
+
         lattice = DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx,
-                                 self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
+                                 self.ny, self.nz, self.lx, self.ly, self.lz, vfHigh) - \
             DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
-                           self.nz, self.lx, self.ly, self.lz, -self.t)
+                           self.nz, self.lx, self.ly, self.lz, vfLow)
 
         return lattice.evaluatePoint(x, y, z)
 
@@ -1655,11 +1680,16 @@ class DiamondNetwork(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.4):
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.5):
         super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
 
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
+
+        vf = self. vf
+
+        vfHigh = ne.evaluate('0.5 + vf/2')
+        vfLow = ne.evaluate('0.5 - vf/2')
 
         lattice = DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
             DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
@@ -1970,28 +2000,48 @@ def latticeRefinementExample():
     shape.saveMesh('refinedGyroid', fileFormat='obj', quality='high')
 
 
+def createModifierArray(shape, minVal=0., maxVal=1., dim='x', func=None):
+
+    res = shape.designSpace.res
+
+    arr2D = np.linspace(minVal, maxVal, res)
+
+    Y, Z, X = np.meshgrid(arr2D, arr2D, arr2D)
+
+    if dim == 'x':
+
+        return X
+
+    if dim == 'y':
+
+        return Y
+
+    if dim == 'z':
+
+        return Z
+
+
 def main():
 
-    ds = DesignSpace(res=200)
+    ds = DesignSpace(res=5)
 
-    lat1 = Gyroid(ds)
+    lattice = Gyroid(ds)
+    '''
+    vf = createModifierArray(lattice, 0.2, 0.9, dim='x')
+    nz = createModifierArray(lattice, 1, 2, dim='z')
 
-    xx = lat1.XX
+    lattice.vf = vf
 
-    pi = math.pi
+    lattice.nz = nz
+    '''
 
-    minXX = xx.min()
-    maxXX = xx.max()
+    shape = Cube(ds, dim=2) / lattice
 
-    xxNorm = ne.evaluate('(xx-minXX)/(maxXX-minXX)')
+    shape.evaluateGrid()
 
-    lat1.nx = xxNorm * 1.2
+    shape.shape2.convertToSpherical()
 
-    lat1.t = ne.evaluate('(xxNorm + 1)/3')
-
-    lat1 = Cube(ds, dim=2) / lat1
-
-    lat1.previewModel()
+    shape.previewModel()
 
 
 def profile(func):
