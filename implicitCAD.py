@@ -1,5 +1,4 @@
 
-import perlin3d
 from smt.surrogate_models import RBF
 import smt
 import scipy
@@ -949,26 +948,33 @@ class Cylinder(Shape):
 
     def evaluatePoint(self, x, y, z):
 
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+        r1 = self.r1
+        r2 = self.r2
+        l = self.l
+
         if self.ax == 'z':
 
-            arr = [np.square(x - self.x)/self.r1**2 + np.square(y - self.y) /
-                   self.r2**2 - 1, np.square(z - self.z) - self.l**2]
+            array1 = ne.evaluate('(x-x0)**2/r1**2 + (y-y0)**2/r2**2 - 1')
+            array2 = ne.evaluate('(z-z0)**2 - l**2')
 
-            return np.maximum(arr[0], arr[1])
+            return ne.evaluate('where(array1 > array2, array1, array2)')
 
         if self.ax == 'x':
 
-            arr = [np.square(y - self.y)/self.r1**2 + np.square(z - self.z) /
-                   self.r2**2 - 1, np.square(x - self.x) - self.l**2]
+            array1 = ne.evaluate('(y-y0)**2/r1**2 + (z-z0)**2/r2**2 - 1')
+            array2 = ne.evaluate('(x-x0)**2 - l**2')
 
-            return np.maximum(arr[0], arr[1])
+            return ne.evaluate('where(array1 > array2, array1, array2)')
 
         if self.ax == 'y':
 
-            arr = [np.square(x - self.x)/self.r1**2 + np.square(z - self.z) /
-                   self.r2**2 - 1, np.square(y - self.y) - self.l**2]
+            array1 = ne.evaluate('(x-x0)**2/r1**2 + (z-z0)**2/r2**2 - 1')
+            array2 = ne.evaluate('(y-y0)**2 - l**2')
 
-            return np.maximum(arr[0], arr[1])
+            return ne.evaluate('where(array1 > array2, array1, array2)')
 
 
 class Boolean(Geometry):
@@ -2025,15 +2031,13 @@ def main():
 
     ds = DesignSpace(res=300)
 
-    lattice = BCC(ds, nx=3, ny=3, nz=3)
-    '''
-    vf = createModifierArray(lattice, 0.2, 0.9, dim='x')
-    nz = createModifierArray(lattice, 1, 2, dim='z')
+    lattice = CompositeLatticeSurface(
+        BCC(ds, nx=2, ny=2, nz=2), Gyroid(ds), blendMatrix=0.2)
 
-    lattice.vf = vf
+    blend = createModifierArray(lattice, 0.01, 0.5, dim='y')
 
-    lattice.nz = nz
-    '''
+    lattice.blendMatrix = blend
+
     lattice.convertToSpherical()
 
     shape = Sphere(ds, r=2) / lattice
@@ -2042,7 +2046,7 @@ def main():
 
     shape -= Cylinder(ds, l=2)
 
-    shape.previewModel(clip='x')
+    shape.previewModel()
 
 
 def profile(func):
