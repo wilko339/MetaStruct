@@ -2031,14 +2031,13 @@ def main():
 
     ds = DesignSpace(res=300)
 
-    lattice = CompositeLatticeSurface(
-        BCC(ds, nx=2, ny=2, nz=2), Gyroid(ds), blendMatrix=0.2)
+    lattice = BCC(ds, nx=math.pi/2, ny=math.pi/2, nz=math.pi/2)
 
     blend = createModifierArray(lattice, 0.01, 0.5, dim='y')
 
     lattice.blendMatrix = blend
 
-    lattice.convertToSpherical()
+    lattice.convertToCylindrical()
 
     shape = Sphere(ds, r=2) / lattice
 
