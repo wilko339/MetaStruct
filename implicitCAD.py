@@ -377,7 +377,7 @@ class Geometry:
 
         return mesh
 
-    def saveMesh(self, filename=None, fileFormat='obj', quality='normal'):
+    def saveMesh(self, filename=None, fileFormat='obj', quality='normal', package='numpy-stl'):
 
         res = self.designSpace.res
         self.quality = quality
@@ -386,6 +386,12 @@ class Geometry:
                    'stl': '.stl',
                    '.stl': '.stl',
                    '.obj': '.obj'}
+
+        packages = ['pymesh', 'numpy-stl']
+
+        if package not in packages:
+
+            raise ValueError('Unrecognised mesh package defined.')
 
         if fileFormat not in formats:
 
@@ -411,21 +417,42 @@ class Geometry:
 
         print('Generating Mesh...')
 
-        self.mesh = pymesh.meshio.form_mesh(self.verts, self.faces)
+        if package == 'pymesh':
 
-        self.mesh = self.fix_mesh(self.mesh, detail=self.quality)
+            self.mesh = pymesh.meshio.form_mesh(self.verts, self.faces)
 
-        print(f'Exporting "{self.filename}" mesh file...\n')
+            self.mesh = self.fix_mesh(self.mesh, detail=self.quality)
 
-        pymesh.save_mesh(self.filename, self.mesh, ascii=True)
+            print(f'Exporting "{self.filename}" mesh file...\n')
 
-        try:
-            f = open(filename)
-            f.close()
-        except:
-            FileNotFoundError(f'Cannot find "{self.filename}" in folder.')
+            pymesh.save_mesh(self.filename, self.mesh, ascii=True)
 
-        print(f'"{self.filename}" successfully exported.\n')
+            try:
+                f = open(filename)
+                f.close()
+            except:
+                FileNotFoundError(f'Cannot find "{self.filename}" in folder.')
+
+            print(f'"{self.filename}" successfully exported.\n')
+
+        if package == 'numpy-stl':
+
+            self.mesh = msh.Mesh(
+                np.zeros(self.faces.shape[0], dtype=msh.Mesh.dtype))
+
+            for i, f in enumerate(self.faces):
+                for j in range(3):
+                    self.mesh.vectors[i][j] = self.verts[f[j], :]
+
+            self.mesh.save(f'{self.filename}')
+
+            try:
+                f = open(filename)
+                f.close()
+            except:
+                FileNotFoundError(f'Cannot find "{self.filename}" in folder.')
+
+            print(f'"{self.filename}" successfully exported.\n')
 
     def wireLattice(self):
 
@@ -437,9 +464,8 @@ class Geometry:
         YY = self.YY
         ZZ = self.ZZ
 
-        r = ne.evaluate('sqrt(XX**2 + YY**2 + ZZ**2)')
+        r = ne.evaluate('sqrt(XX**2 + YY**2)')
         az = ne.evaluate('arctan2(YY, XX)')
-        inc = ne.evaluate('arccos(ZZ/r)')
 
         self.XX = r
         self.YY = az
@@ -1097,8 +1123,16 @@ class Union(Boolean):
 
         return np.minimum(self.shape1.evaluatePoint(x, y, z), self.shape2.evaluatePoint(x, y, z))
 
-    @profile(immediate=True)
+    # @profile(immediate=True)
     def evaluateGrid(self):
+
+        if not hasattr(self.shape1, 'evaluatedGrid'):
+
+            self.shape1.evaluateGrid()
+
+        if not hasattr(self.shape2, 'evaluatedGrid'):
+
+            self.shape2.evaluateGrid()
 
         s1 = self.shape1.evaluatedGrid
         s2 = self.shape2.evaluatedGrid
@@ -1381,11 +1415,6 @@ class Lattice(Geometry):
             raise ValueError(f'{n} is not a number.')
 
 
-'''
-    
-'''
-
-
 class GyroidSurface(Lattice):
     """Gyroid Lattice Object:\n\n\
     (x, y, z)\t\t: Centre of Lattice. Adjust to Translate.\n\n\
@@ -1616,6 +1645,12 @@ class DoubleGyroidNetwork(Lattice):
             GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
                           self.nz, self.lx, self.ly, self.lz, vfLow)
 
+        for shape in lattice.shapes:
+
+            shape.XX = self.XX
+            shape.YY = self.YY
+            shape.ZZ = self.ZZ
+
         return -lattice.evaluatePoint(x, y, z)
 
 
@@ -1632,20 +1667,6 @@ class GyroidNetwork(Lattice):
 
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
-
-        if self.coordSys == 'car':
-
-            if self.transform is not None:
-
-                x, y, z = self.transformInputs(x, y, z)
-
-        if self.coordSys == 'cyl':
-
-            r = np.sqrt(np.square(x) + np.square(y))
-            theta = np.arctan(y/z)
-
-            x = r * np.cos(theta)
-            y = r * np.sin(theta)
 
         vf = 1 - self.vf
 
@@ -1677,6 +1698,12 @@ class Diamond(Lattice):
             DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
                            self.nz, self.lx, self.ly, self.lz, vfLow)
 
+        for shape in lattice.shapes:
+
+            shape.XX = self.XX
+            shape.YY = self.YY
+            shape.ZZ = self.ZZ
+
         return lattice.evaluatePoint(x, y, z)
 
 
@@ -1687,19 +1714,25 @@ class DiamondNetwork(Lattice):
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.5):
-        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
 
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
-        vf = self. vf
+        vf = 1 - self.vf
 
         vfHigh = ne.evaluate('0.5 + vf/2')
         vfLow = ne.evaluate('0.5 - vf/2')
 
-        lattice = DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, self.t) - \
+        lattice = DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, vfHigh) - \
             DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
-                           self.nz, self.lx, self.ly, self.lz, -self.t)
+                           self.nz, self.lx, self.ly, self.lz, vfLow)
+
+        for shape in lattice.shapes:
+
+            shape.XX = self.XX
+            shape.YY = self.YY
+            shape.ZZ = self.ZZ
 
         return -lattice.evaluatePoint(x, y, z)
 
@@ -1984,11 +2017,9 @@ def latticeRefinementExample():
 
     cuboid = Cuboid(ds, xd=2, yd=2, zd=0.5)
 
-    refinedLattice = Gyroid(ds, nx=2, ny=2, nz=2, t=0.8)
+    refinedLattice = Gyroid(ds, 1, ny=math.pi/3, nz=2, vf=0.4)
 
-    refinedLattice.evaluateGrid()
-
-    refinedLattice.evaluatedGrid
+    refinedLattice.convertToCylindrical()
 
     sphere = Sphere(ds, r=1.5)
 
@@ -1997,13 +2028,11 @@ def latticeRefinementExample():
     sphere.evaluatedGrid = np.where(
         sphere.evaluatedGrid > 0, 0, sphere.evaluatedGrid)
 
-    refinedLattice.evaluatedGrid -= sphere.evaluatedGrid / 6
+    refinedLattice.evaluatedGrid -= sphere.evaluatedGrid / 10
 
     shape = cuboid / refinedLattice
 
-    shape.evaluateGrid()
-
-    shape.saveMesh('refinedGyroid', fileFormat='obj', quality='high')
+    shape.previewModel()
 
 
 def createModifierArray(shape, minVal=0., maxVal=1., dim='x', func=None):
@@ -2029,23 +2058,105 @@ def createModifierArray(shape, minVal=0., maxVal=1., dim='x', func=None):
 
 def main():
 
-    ds = DesignSpace(res=300)
+    ds = DesignSpace(res=500, xBounds=[-20, 20],
+                     yBounds=[-20, 20], zBounds=[-20, 20])
 
-    lattice = BCC(ds, nx=math.pi/2, ny=math.pi/2, nz=math.pi/2)
+    lattice_region = Cylinder(ds, r1=20, r2=20, l=3.48)
 
-    blend = createModifierArray(lattice, 0.01, 0.5, dim='y')
+    inner = Cylinder(ds, r1=15, r2=15, l=3.5)
 
-    lattice.blendMatrix = blend
+    solid = lattice_region - inner
+
+    outer_skin = lattice_region - Cylinder(ds, r1=19.5, r2=19.5, l=3.5)
+
+    inner_skin = Cylinder(ds, r1=15.5, r2=15.5, l=3.5) - \
+        Cylinder(ds, r1=15, r2=15, l=3.5)
+
+    lat_x = 5
+    lat_y = math.pi / 10
+    lat_z = 7
+
+    for vf in [0.1, 0.3, 0.5]:
+
+        for lattice in [BCC(ds, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf),
+                        Gyroid(ds, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf),
+                        GyroidNetwork(ds, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf),
+                        DoubleGyroidNetwork(
+                            ds, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf),
+                        Diamond(ds, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf)]:
+
+            lattice.convertToCylindrical()
+
+            latticed = solid / lattice
+
+            latticed += inner_skin
+
+            latticed += outer_skin
+
+            latticed.saveMesh(f'{lattice.name}_{vf}_skinned', 'stl')
+
+    '''
+
+    ds = DesignSpace(300, xBounds=[-50, 50],
+                     yBounds=[-50, 50], zBounds=[-50, 50])
+
+    outer_skin = Cylinder(ds, r1=25, r2=25, l=25) - \
+        Cylinder(ds,  r1=24, r2=24, l=25)
+
+    inner_skin = Cylinder(ds, r1=11, r2=11, l=25) - \
+        Cylinder(ds, r1=10, r2=10, l=25)
+
+    lattice_region = outer_skin.shape2 - inner_skin.shape1
+
+    lattice = Diamond(ds, lx=5, ly=math.pi/5, lz=10, vf=0.3)
 
     lattice.convertToCylindrical()
 
-    shape = Sphere(ds, r=2) / lattice
+    lattice_region /= lattice
 
-    shape -= Sphere(ds, r=1.5)
-
-    shape -= Cylinder(ds, l=2)
+    shape = lattice_region
 
     shape.previewModel()
+
+    
+
+    ds = DesignSpace(500, xBounds=[-50, 50],
+                     yBounds=[-50, 50], zBounds=[-50, 50])
+
+    domain = Cylinder(ds, r1=50, r2=50, l=8) - \
+        Cylinder(ds, r1=20, r2=20, l=8)
+
+    lattice = Diamond(ds, lx=10, ly=math.pi/8, lz=15, vf=0.2)
+
+    lattice.convertToCylindrical()
+
+    lattice = domain / lattice
+
+    lattice2 = BCC(ds, lx=5, ly=math.pi/8, lz=15)
+
+    lattice2.convertToCylindrical()
+
+    domain2 = domain.shape2 / lattice2
+
+    lattice += domain2
+
+    innerSkin = domain.shape2 - Cylinder(ds, r1=19, r2=19, l=8)
+
+    lattice += innerSkin
+
+    outerSkin = domain.shape1 - Cylinder(ds, r1=49, r2=49, l=8)
+
+    lattice += outerSkin
+
+    lattice -= Cylinder(ds, r1=5, r2=5, l=10)
+
+    # blended = SmoothUnion(lattice, Cylinder(ds, r1=10, r2=10, l=50))
+
+    lattice.previewModel()
+
+    # lattice.saveMesh(fileFormat='stl')
+
+    '''
 
 
 def profile(func):
