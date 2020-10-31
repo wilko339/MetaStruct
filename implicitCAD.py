@@ -1,19 +1,4 @@
 
-from smt.surrogate_models import RBF
-import smt
-import scipy
-import numexpr as ne
-import numpy as np
-import pymesh
-import skfmm
-import skimage
-import visvis as vv
-from numpy import linalg as LA
-from profilehooks import profile
-from skimage import measure
-from stl import mesh as msh
-from visvis.functions import gca, isosurface
-import timeit
 import copy
 import cProfile
 import io
@@ -22,18 +7,41 @@ import os
 import pstats
 import sys
 import time
+import timeit
+
+import mesh_to_sdf
+import numexpr as ne
+import numpy as np
+import pymesh
+import scipy
+import skfmm
+import skimage
+import smt
+import trimesh
+import visvis as vv
+from numpy import linalg as LA
+from profilehooks import profile
+from skimage import measure
+from smt.surrogate_models import RBF
+from stl import mesh as msh
+from visvis.functions import gca, isosurface
+
 # import perlin3d
 
 
 class DesignSpace:
 
-    def __init__(self, res=100, xBounds=[-2.1, 2.1], yBounds=[-2.1, 2.1], zBounds=[-2.1, 2.1]):
+    def __init__(self, res=100, xRes=0, yRes=0, zRes=0, xBounds=[-2.1, 2.1], yBounds=[-2.1, 2.1], zBounds=[-2.1, 2.1]):
 
         self.xBounds = xBounds
         self.yBounds = yBounds
         self.zBounds = zBounds
 
         self.res = res
+
+        self.xRes = xRes
+        self.yRes = yRes
+        self.zRes = zRes
 
         self.xLower = min(self.xBounds)
         self.xUpper = max(self.xBounds)
@@ -44,13 +52,25 @@ class DesignSpace:
 
         offset = 0.1
 
-        X = np.linspace(self.xLower - offset, self.xUpper + offset, res)
-        Y = np.linspace(self.yLower - offset, self.yUpper + offset, res)
-        Z = np.linspace(self.zLower - offset, self.zUpper + offset, res)
+        if self.xRes == 0:
 
-        self.xStep = (self.xUpper - self.xLower) / (res - 1)
-        self.yStep = (self.yUpper - self.yLower) / (res - 1)
-        self.zStep = (self.zUpper - self.zLower) / (res - 1)
+            X = np.linspace(self.xLower - offset, self.xUpper + offset, res)
+            Y = np.linspace(self.yLower - offset, self.yUpper + offset, res)
+            Z = np.linspace(self.zLower - offset, self.zUpper + offset, res)
+
+            self.xStep = (self.xUpper - self.xLower) / (res - 1)
+            self.yStep = (self.yUpper - self.yLower) / (res - 1)
+            self.zStep = (self.zUpper - self.zLower) / (res - 1)
+
+        else:
+
+            X = np.linspace(self.xLower - offset, self.xUpper + offset, xRes)
+            Y = np.linspace(self.yLower - offset, self.yUpper + offset, yRes)
+            Z = np.linspace(self.zLower - offset, self.zUpper + offset, zRes)
+
+            self.xStep = (self.xUpper - self.xLower) / (xRes - 1)
+            self.yStep = (self.yUpper - self.yLower) / (yRes - 1)
+            self.zStep = (self.zUpper - self.zLower) / (zRes - 1)
 
         print('Generating Sample Grid in Design Space')
 
@@ -124,9 +144,16 @@ class Geometry:
 
         pass
 
-    def evaluateDistance(self, x, y, z):
+    def evaluateDistance(self):
 
-        pass
+        if not hasattr(self, 'evaluatedGrid'):
+
+            self.evaluateGrid()
+
+        print(f'Evaluating distance field for {self.name}...')
+
+        self.distanceGrid = skfmm.distance(
+            self.evaluatedGrid, dx=self.designSpace.xStep)
 
     def translate(self, x, y, z):
 
@@ -205,8 +232,8 @@ class Geometry:
 
         try:
 
-            self.verts, self.faces, self.normals, self.values = measure.marching_cubes(self.evaluatedGrid, level=level, spacing=(
-                self.xStep, self.yStep, self.zStep), allow_degenerate=False)
+            self.verts, self.faces, self.normals, self.values = measure.marching_cubes_lewiner(self.evaluatedGrid, level=level, spacing=(
+                self.yStep, self.zStep, self.xStep), allow_degenerate=False)
 
             self.verts = np.fliplr(self.verts)
 
@@ -215,7 +242,7 @@ class Geometry:
             raise ValueError(
                 f'No isosurface found at specified level ({level})')
 
-    def previewModel(self, clip=None, clipVal=0, flipClip=False):
+    def previewModel(self, clip=None, clipVal=0, flipClip=False, level=0):
 
         self.compareLims()
 
@@ -261,7 +288,7 @@ class Geometry:
                     self.evaluatedGrid = np.maximum(
                         self.evaluatedGrid, clipVal - self.YY)
 
-        self.findSurface()
+        self.findSurface(level=level)
 
         vv.figure(1)
 
@@ -440,6 +467,8 @@ class Geometry:
             self.mesh = msh.Mesh(
                 np.zeros(self.faces.shape[0], dtype=msh.Mesh.dtype))
 
+            self.verts = np.fliplr(self.verts)
+
             for i, f in enumerate(self.faces):
                 for j in range(3):
                     self.mesh.vectors[i][j] = self.verts[f[j], :]
@@ -562,10 +591,6 @@ class Line(Shape):
 
         NotImplemented
 
-    def evaluateDistance(self, x, y, z):
-
-        NotImplemented
-
 
 class Spheroid(Shape):
 
@@ -654,21 +679,6 @@ class Sphere(Shape):
         return np.square(x - self.x) + np.square(y - self.y) + \
             np.square(z - self.z) - (self.r)** 2
         '''
-
-    def evaluateDistance(self, x, y, z):
-        '''
-        return np.sqrt(np.square(x - self.x) + np.square(y - self.y) + \
-            np.square(z-self.z)) - self.r
-        '''
-
-        x0 = self.x
-        y0 = self.y
-        z0 = self.z
-        r = self.r
-
-        expr = 'sqrt((x-x0)**2 + (y-y0)**2 + (y-y0)**2) + r'
-
-        return ne.evaluate(expr)
 
 
 class HollowSphere(Shape):
@@ -760,27 +770,6 @@ class Cube(Shape):
         max1 = ne.evaluate('where(arr1>arr2, arr1, arr2)')
 
         return ne.evaluate('where(max1>arr3, max1, arr3)')
-
-    def evaluateDistance(self, x, y, z):
-
-        # p = np.array(([x, y, z]))
-
-        xmax = max(self.xLims)
-        ymax = max(self.yLims)
-        zmax = max(self.zLims)
-
-        shape = np.shape(x)
-
-        xmax = np.full(shape, xmax)
-        ymax = np.full(shape, ymax)
-        zmax = np.full(shape, zmax)
-
-        b = np.array(([xmax, ymax, zmax]))
-
-        q = np.absolute([x, y, z]) - b
-
-        return LA.norm(np.maximum(q, 0)) + \
-            np.minimum(np.maximum(q[0], np.maximum(q[1], q[2])), 0)
 
 
 class HollowCube(Shape):
@@ -896,21 +885,6 @@ class Cuboid(Shape):
         max1 = ne.evaluate('where(arr1>arr2, arr1, arr2)')
 
         return ne.evaluate('where(max1>arr3, max1, arr3)')
-
-    def evaluateDistance(self, x, y, z):
-
-        p = np.array(([x, y, z]))
-
-        xmax = max(self.xLims)
-        ymax = max(self.yLims)
-        zmax = max(self.zLims)
-
-        b = np.array(([xmax, ymax, zmax]))
-
-        q = np.absolute(p) - b
-
-        return LA.norm(np.maximum(q, 0)) + \
-            np.minimum(np.maximum(q[0], np.maximum(q[1], q[2])), 0)
 
 
 class Cylinder(Shape):
@@ -1479,8 +1453,8 @@ class BCC(Lattice):
         t = ne.evaluate('-8.04119e-8*vf**4 + 1.71079e-5*vf**3 - \
             0.0014808*vf**2 - 0.0136365*vf + 2.96255414')
 
-        expr = 'cos(2*kx*x) + cos(2*ky*y) + cos(2*kz*z) - \
-            2*(cos(kx*x)*cos(ky*y) + cos(ky*y)*cos(kz*z) + cos(kz*z)*cos(kx*x)) + t'
+        expr = 'cos(2*kx*(x-x0)) + cos(2*ky*(y-y0)) + cos(2*kz*(z-z0)) - \
+            2*(cos(kx*(x-x0))*cos(ky*(y-y0)) + cos(ky*(y-y0))*cos(kz*(z-z0)) + cos(kz*(z-z0))*cos(kx*(x-x0))) + t'
 
         return ne.evaluate(expr)
 
@@ -1525,8 +1499,8 @@ class PrimitiveSurface(Lattice):
         t = self.vf
 
         expr = '-(cos(kx*(x-x0)) + \
-                 cos(ky*(y-y0)) + \
-                 cos(kz*(z-z0)) - t) '
+                 cos(ky*(y-y0)) - \
+                  t) '
 
         return ne.evaluate(expr)
 
@@ -1743,16 +1717,16 @@ class Primitive(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, t=0.6):
-        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, t)
+    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.6):
+        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
 
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
         lattice = PrimitiveSurface(self.designSpace, self.x, self.y, self.z, self.nx,
-                                   self.ny, self.nz, self.lx, self.ly, self.lz, -self.t) - \
+                                   self.ny, self.nz, self.lx, self.ly, self.lz, -self.vf) - \
             PrimitiveSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
-                             self.nz, self.lx, self.ly, self.lz, self.t)
+                             self.nz, self.lx, self.ly, self.lz, self.vf)
 
         return lattice.evaluatePoint(x, y, z)
 
@@ -2056,107 +2030,74 @@ def createModifierArray(shape, minVal=0., maxVal=1., dim='x', func=None):
         return Z
 
 
-def main():
+def leos_rings():
 
-    ds = DesignSpace(res=500, xBounds=[-20, 20],
-                     yBounds=[-20, 20], zBounds=[-20, 20])
+    ds = DesignSpace(res=400, xRes=1200, yRes=200, zRes=1200, xBounds=[-20, 20],
+                     yBounds=[-2.5, 2.5], zBounds=[-20, 20])
 
-    lattice_region = Cylinder(ds, r1=20, r2=20, l=3.48)
+    inner = Cylinder(ds, r1=15, r2=15, l=2.5)
 
-    inner = Cylinder(ds, r1=15, r2=15, l=3.5)
+    outer_removal_band = Cylinder(ds, r1=21, r2=21, l=2) - \
+        Cylinder(ds, r1=19, r2=19, l=2)
 
-    solid = lattice_region - inner
+    inner_removal_band = Cylinder(ds, r1=16, r2=16, l=2) - \
+        Cylinder(ds, r1=14, r2=14, l=2)
 
-    outer_skin = lattice_region - Cylinder(ds, r1=19.5, r2=19.5, l=3.5)
+    outer_skin = Cylinder(ds, r1=20, r2=20, l=2.5) - \
+        Cylinder(ds, r1=19.5, r2=19.5, l=2.5) - outer_removal_band
 
-    inner_skin = Cylinder(ds, r1=15.5, r2=15.5, l=3.5) - \
-        Cylinder(ds, r1=15, r2=15, l=3.5)
+    inner_skin = Cylinder(ds, r1=15.5, r2=15.5, l=2.5) - \
+        Cylinder(ds,  r1=15, r2=15, l=2.5) - inner_removal_band
 
-    lat_x = 5
-    lat_y = math.pi / 10
-    lat_z = 7
+    lattice_region = Cylinder(ds, r1=20, r2=20, l=2.5) - \
+        Cylinder(ds, r1=15, r2=15, l=2.5)
 
-    for vf in [0.1, 0.3, 0.5]:
+    lat_x = 2.5
+    lat_y = math.pi / 20
+    lat_z = 2.5
 
-        for lattice in [BCC(ds, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf),
-                        Gyroid(ds, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf),
-                        GyroidNetwork(ds, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf),
-                        DoubleGyroidNetwork(
-                            ds, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf),
-                        Diamond(ds, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf)]:
+    for vf in [0.2, 0.3, 0.5]:
+
+        for lattice in [GyroidNetwork(
+                ds, x=-0.35, z=-0.35, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf)]:
 
             lattice.convertToCylindrical()
 
-            latticed = solid / lattice
-
-            latticed += inner_skin
+            latticed = lattice_region / lattice
 
             latticed += outer_skin
 
-            latticed.saveMesh(f'{lattice.name}_{vf}_skinned', 'stl')
+            latticed += inner_skin
 
-    '''
+            # latticed.previewModel()
 
-    ds = DesignSpace(300, xBounds=[-50, 50],
-                     yBounds=[-50, 50], zBounds=[-50, 50])
+            latticed.saveMesh(
+                f'C:\\Users\\Toby\\Added Scientific Ltd\\Design & Comp. Team - General\\LeoRings\\2.5mm\\{lattice.name}_{vf}', 'stl')
 
-    outer_skin = Cylinder(ds, r1=25, r2=25, l=25) - \
-        Cylinder(ds,  r1=24, r2=24, l=25)
 
-    inner_skin = Cylinder(ds, r1=11, r2=11, l=25) - \
-        Cylinder(ds, r1=10, r2=10, l=25)
+def lattice_bracket():
 
-    lattice_region = outer_skin.shape2 - inner_skin.shape1
+    ds = DesignSpace(100)
 
-    lattice = Diamond(ds, lx=5, ly=math.pi/5, lz=10, vf=0.3)
+    mesh = trimesh.load_mesh('D:\\ImplicitCAD\\Engine_Bracket.STL')
 
-    lattice.convertToCylindrical()
+    voxels = mesh_to_sdf.mesh_to_voxels(
+        mesh, ds.res, surface_point_method='sample')
 
-    lattice_region /= lattice
+    shape = Shape(ds)
 
-    shape = lattice_region
+    shape.evaluatedGrid = voxels
+
+    shape.xLims = shape.yLims = shape.zLims = [-1, 1]
+
+    shape /= Gyroid(ds)
 
     shape.previewModel()
 
-    
 
-    ds = DesignSpace(500, xBounds=[-50, 50],
-                     yBounds=[-50, 50], zBounds=[-50, 50])
+def main():
 
-    domain = Cylinder(ds, r1=50, r2=50, l=8) - \
-        Cylinder(ds, r1=20, r2=20, l=8)
-
-    lattice = Diamond(ds, lx=10, ly=math.pi/8, lz=15, vf=0.2)
-
-    lattice.convertToCylindrical()
-
-    lattice = domain / lattice
-
-    lattice2 = BCC(ds, lx=5, ly=math.pi/8, lz=15)
-
-    lattice2.convertToCylindrical()
-
-    domain2 = domain.shape2 / lattice2
-
-    lattice += domain2
-
-    innerSkin = domain.shape2 - Cylinder(ds, r1=19, r2=19, l=8)
-
-    lattice += innerSkin
-
-    outerSkin = domain.shape1 - Cylinder(ds, r1=49, r2=49, l=8)
-
-    lattice += outerSkin
-
-    lattice -= Cylinder(ds, r1=5, r2=5, l=10)
-
-    # blended = SmoothUnion(lattice, Cylinder(ds, r1=10, r2=10, l=50))
-
-    lattice.previewModel()
-
-    # lattice.saveMesh(fileFormat='stl')
-
-    '''
+    leos_rings()
 
 
 def profile(func):
