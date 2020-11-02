@@ -18,10 +18,6 @@ class Gyroid(Lattice):
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
-        if self.transform is not None:
-
-            x, y, z = self.transformInputs(x, y, z)
-
         vf = self.vf
 
         vfHigh = ne.evaluate('0.5 + vf/2')
