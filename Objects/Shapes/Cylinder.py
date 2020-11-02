@@ -15,7 +15,6 @@ class Cylinder(Shape):
         self.ax = ax
 
         if self.ax == 'z':
-
             self.xLims = np.array(
                 [self.x - self.r1, self.x + self.r1])
             self.yLims = np.array(
@@ -24,7 +23,6 @@ class Cylinder(Shape):
                 [self.z - self.l, self.z + self.l])
 
         if self.ax == 'x':
-
             self.xLims = np.array(
                 [self.x - self.l, self.x + self.l])
             self.yLims = np.array(
@@ -33,7 +31,6 @@ class Cylinder(Shape):
                 [self.z - self.r2, self.z + self.r2])
 
         if self.ax == 'y':
-
             self.xLims = np.array(
                 [self.x - self.r1, self.x + self.r1])
             self.yLims = np.array(
@@ -48,19 +45,16 @@ class Cylinder(Shape):
     def __str__(self):
 
         string = super().__str__() + \
-            f'\nAxis: {self.ax}' + \
-            f'\nLength: {self.l}'
+                 f'\nAxis: {self.ax}' + \
+                 f'\nLength: {self.l}'
 
         if self.ax == 'z':
-
             return string + f'\nRadii(x, y): ({self.r1}, {self.r2})'
 
         if self.ax == 'x':
-
             return string + f'\nRadii(y, z): ({self.r1}, {self.r2})'
 
         if self.ax == 'y':
-
             return string + f'\nRadii(x, z): ({self.r1}, {self.r2})'
 
     def evaluatePoint(self, x, y, z):
@@ -72,23 +66,15 @@ class Cylinder(Shape):
         r2 = self.r2
         l = self.l
 
-        if self.ax == 'z':
+        circles = {'z': '(x-x0)**2/r1**2 + (y-y0)**2/r2**2 - 1',
+                   'x': '(y-y0)**2/r1**2 + (z-z0)**2/r2**2 - 1',
+                   'y': '(x-x0)**2/r1**2 + (z-z0)**2/r2**2 - 1'}
 
-            array1 = ne.evaluate('(x-x0)**2/r1**2 + (y-y0)**2/r2**2 - 1')
-            array2 = ne.evaluate('(z-z0)**2 - l**2')
+        lengths = {'z': '(z-z0)**2 - l**2',
+                   'x': '(x-x0)**2 - l**2',
+                   'y': '(y-y0)**2 - l**2'}
 
-            return ne.evaluate('where(array1 > array2, array1, array2)')
+        array1 = ne.evaluate(circles[self.ax])
+        array2 = ne.evaluate(lengths[self.ax])
 
-        if self.ax == 'x':
-
-            array1 = ne.evaluate('(y-y0)**2/r1**2 + (z-z0)**2/r2**2 - 1')
-            array2 = ne.evaluate('(x-x0)**2 - l**2')
-
-            return ne.evaluate('where(array1 > array2, array1, array2)')
-
-        if self.ax == 'y':
-
-            array1 = ne.evaluate('(x-x0)**2/r1**2 + (z-z0)**2/r2**2 - 1')
-            array2 = ne.evaluate('(y-y0)**2 - l**2')
-
-            return ne.evaluate('where(array1 > array2, array1, array2)')
+        return ne.evaluate('where(array1 > array2, array1, array2)')
