@@ -7,14 +7,13 @@ from Objects.Booleans.Intersection import Intersection
 from Objects.Booleans.Difference import Difference
 
 
-class Lattice(Geometry):
+# TODO: Compress lattice types into one class? Use dict of functions?
 
+class Lattice(Geometry):
     morph = 'Lattice'
 
     def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.5):
         super().__init__(designSpace)
-
-        self.transform = None
 
         self.name = self.__class__.__name__
 
@@ -47,10 +46,10 @@ class Lattice(Geometry):
     def __str__(self):
 
         return f'{self.name} {self.morph}\n' + \
-            f'Centre(x, y, z): ({self.x}, {self.y}, {self.z})\n' + \
-            f'Number of Unit Cells per Unit Length(x, y, z): ({self.nx}, {self.ny}, {self.nz})\n' + \
-            f'Unit Cell Size (x, y, z): ({self.lx}, {self.ly}, {self.lz})\n' + \
-            f'Volume Fraction: {self.vf}'
+               f'Centre(x, y, z): ({self.x}, {self.y}, {self.z})\n' + \
+               f'Number of Unit Cells per Unit Length(x, y, z): ({self.nx}, {self.ny}, {self.nz})\n' + \
+               f'Unit Cell Size (x, y, z): ({self.lx}, {self.ly}, {self.lz})\n' + \
+               f'Volume Fraction: {self.vf}'
 
     def __add__(self, other):
 
@@ -83,5 +82,6 @@ class Lattice(Geometry):
             float(n)
             return n
 
-        except:
-            raise ValueError(f'{n} is not a number.')
+        except ValueError:
+            print(f'{n} is not a number.')
+            raise
