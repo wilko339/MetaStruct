@@ -7,12 +7,8 @@ import numpy as np
 class CompositeLatticeSurface(Geometry):
 
     def __init__(self, lat1, lat2, blendMatrix=0.5):
-
-        if lat1.designSpace.XX is not lat2.designSpace.XX:
-            if lat1.designSpace.YY is not lat2.designSpace.YY:
-                if lat1.designSpace.ZZ is not lat2.designSpace.ZZ:
-                    raise ValueError(
-                        f'{lat1.name} and {lat2.name} are defined in different design spaces.')
+        if lat1.designSpace is not lat2.designSpace:
+            raise ValueError('Mismatching Design Spaces')
 
         super().__init__(lat1.designSpace)
         self.designSpace = lat1.designSpace
