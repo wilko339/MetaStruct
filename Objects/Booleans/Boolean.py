@@ -6,11 +6,8 @@ class Boolean(Geometry):
 
     def __init__(self, shape1, shape2):
 
-        if shape1.designSpace.XX is not shape2.designSpace.XX:
-            if shape1.designSpace.YY is not shape2.designSpace.YY:
-                if shape1.designSpace.ZZ is not shape2.designSpace.ZZ:
-                    raise ValueError(
-                        f'{shape1.name} and {shape2.name} are defined in different design spaces.')
+        if shape1.designSpace is not shape2.designSpace:
+            raise ValueError('Mismatching Design Spaces')
 
         self.designSpace = shape1.designSpace
 
@@ -41,18 +38,18 @@ class Boolean(Geometry):
 
         self.name = shape1.name + '_' + shape2.name
 
-    def setLims(self):
-
-        self.xLims = [0., 0.]
-        self.yLims = [0., 0.]
-        self.zLims = [0., 0.]
-
         self.shapesXmins = []
         self.shapesXmaxs = []
         self.shapesYmins = []
         self.shapesYmaxs = []
         self.shapesZmins = []
         self.shapesZmaxs = []
+
+    def setLims(self):
+
+        self.xLims = [0., 0.]
+        self.yLims = [0., 0.]
+        self.zLims = [0., 0.]
 
         if self.shape2.morph != 'Lattice':
 
@@ -65,12 +62,9 @@ class Boolean(Geometry):
                 self.shapesZmins.append(shape.zLims[0])
                 self.shapesZmaxs.append(shape.zLims[1])
 
-            self.xLims[0] = min(self.shapesXmins)
-            self.xLims[1] = max(self.shapesXmaxs)
-            self.yLims[0] = min(self.shapesYmins)
-            self.yLims[1] = max(self.shapesYmaxs)
-            self.zLims[0] = min(self.shapesZmins)
-            self.zLims[1] = max(self.shapesZmaxs)
+            self.xLims = [min(self.shapesXmins), max(self.shapesXmaxs)]
+            self.yLims = [min(self.shapesYmins), max(self.shapesYmaxs)]
+            self.zLims = [min(self.shapesZmins), max(self.shapesZmaxs)]
 
         if self.shape2.morph == 'Lattice':
 
