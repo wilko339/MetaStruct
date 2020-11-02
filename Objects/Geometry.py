@@ -141,18 +141,6 @@ class Geometry:
                            math.sin(theta), n*n*var + math.cos(theta)]
                           ]
 
-    def transformInputs(self, x, y, z):
-
-        coords = np.array([x, y, z])
-
-        coords = np.dot(coords.T, self.transform).T
-
-        x = coords[0]
-        y = coords[1]
-        z = coords[2]
-
-        return x, y, z
-
     def evaluateGrid(self):
 
         print(f'Evaluating grid points for {self.name}...')
