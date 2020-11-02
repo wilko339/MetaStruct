@@ -10,27 +10,8 @@ class DoubleGyroidNetwork(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.2):
-        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
-
-        self.coordSys = 'car'
-
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
-
-        if self.coordSys == 'car':
-
-            if self.transform is not None:
-
-                x, y, z = self.transformInputs(x, y, z)
-
-        if self.coordSys == 'cyl':
-
-            r = np.sqrt(np.square(x) + np.square(y))
-            theta = np.arctan(y/z)
-
-            x = r * np.cos(theta)
-            y = r * np.sin(theta)
 
         vf = 1 - self.vf
 

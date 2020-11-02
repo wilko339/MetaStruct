@@ -11,14 +11,6 @@ class GyroidSurface(Lattice):
 
     # https://tinyurl.com/ybjoblaw
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.5):
-
-        self.vf = vf
-
-        t = (vf-0.501)/0.3325
-
-        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
-
     def evaluatePoint(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
