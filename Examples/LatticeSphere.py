@@ -1,7 +1,7 @@
+from Objects.Booleans.Boolean import Union
 from Objects.DesignSpace import DesignSpace
-from Objects.Shapes.HollowSphere import HollowSphere
-from Objects.Booleans.Union import Union
 from Objects.Lattices.Gyroid import Gyroid
+from Objects.Shapes.HollowSphere import HollowSphere
 
 
 def latticedSphereExample(outerRad=2, outerSkinThickness=0.1, innerRad=1, innerSkinThickness=0.1):
