@@ -1,10 +1,11 @@
-from Objects.Geometry import Geometry
 import math
+
 import numpy as np
-import numexpr as ne
-from Objects.Booleans.Union import Union
-from Objects.Booleans.Intersection import Intersection
-from Objects.Booleans.Difference import Difference
+
+from Objects.Booleans.Boolean import Difference
+from Objects.Booleans.Boolean import Intersection
+from Objects.Booleans.Boolean import Union
+from Objects.Geometry import Geometry
 
 
 # TODO: Compress lattice types into one class? Use dict of functions?
