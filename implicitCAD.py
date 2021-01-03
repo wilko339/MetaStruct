@@ -6,15 +6,17 @@ from Objects.Shapes.Cube import Cube
 
 def main():
 
-    ds = DesignSpace(res=100, xBounds=[-1.1, 1.1], yBounds=[-1.1, 1.1], zBounds=[-1.1, 1.1])
+    ds = DesignSpace(res=100, xBounds=[-1.1, 1.1],
+                     yBounds=[-1.1, 1.1], zBounds=[-1.1, 1.1])
 
-    cube = Cube(ds, round_r=1).previewModel()
+    cube = Cube(ds, round_r=1)
 
     pc = LHSPoints(n_points=2000, shape=cube)
 
-    lattice = ConvexHullLattice(ds, pc) + cube
+    lattice = ConvexHullLattice(ds, pc)
 
     lattice.previewModel()
+
 
 if __name__ == '__main__':
     main()
