@@ -1,4 +1,6 @@
+import numexpr as ne
 import numpy as np
+
 from Objects.Geometry import Geometry
 
 
@@ -20,7 +22,6 @@ class Boolean(Geometry):
         self.zStep = self.designSpace.zStep
 
         if shape1.morph == 'Lattice' and shape2.morph != 'Lattice':
-
             raise TypeError('Please enter Lattice Object as 2nd Argument.')
 
         self.morph = 'Shape'
@@ -30,6 +31,14 @@ class Boolean(Geometry):
         self.shape1 = shape1
         self.shape2 = shape2
         self.shapes = [shape1, shape2]
+
+        self.shapesXmins = []
+        self.shapesXmaxs = []
+        self.shapesYmins = []
+        self.shapesYmaxs = []
+        self.shapesZmins = []
+        self.shapesZmaxs = []
+
         self.setLims()
 
         self.x = (shape1.x + shape2.x) / 2
@@ -38,12 +47,7 @@ class Boolean(Geometry):
 
         self.name = shape1.name + '_' + shape2.name
 
-        self.shapesXmins = []
-        self.shapesXmaxs = []
-        self.shapesYmins = []
-        self.shapesYmaxs = []
-        self.shapesZmins = []
-        self.shapesZmaxs = []
+        self.expression = None
 
     def setLims(self):
 
@@ -54,7 +58,6 @@ class Boolean(Geometry):
         if self.shape2.morph != 'Lattice':
 
             for shape in self.shapes:
-
                 self.shapesXmins.append(shape.xLims[0])
                 self.shapesXmaxs.append(shape.xLims[1])
                 self.shapesYmins.append(shape.yLims[0])
@@ -67,7 +70,6 @@ class Boolean(Geometry):
             self.zLims = [min(self.shapesZmins), max(self.shapesZmaxs)]
 
         if self.shape2.morph == 'Lattice':
-
             self.morph == 'Lattice'
 
             self.xLims = self.shape1.xLims
@@ -95,13 +97,93 @@ class Boolean(Geometry):
         for shape in self.shapes:
 
             if not hasattr(shape, 'evaluatedGrid'):
-
                 shape.evaluateGrid()
 
     def translate(self, x, y, z):
 
         for shape in self.shapes:
-
             shape.translate(x, y, z)
 
         self.setLims()
+
+    def evaluatePoint(self, x, y, z):
+
+        for shape in self.shapes:
+
+            if not hasattr(shape, 'evaluatedGrid'):
+                shape.evaluateGrid()
+
+        g1 = self.shape1.evaluatedGrid
+        g2 = self.shape2.evaluatedGrid
+
+        if hasattr(self, 'blend'):
+
+            b = self.blend
+
+        return ne.evaluate(self.expression)
+
+
+class Union(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+        self.expression = 'where(g1<g2, g1, g2)'
+
+
+class Difference(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+        self.expression = 'where(g1>-g2, g1, -g2)'
+
+
+class Intersection(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+        self.expression = 'where(g1>g2, g1, g2)'
+
+
+class Add(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+        self.expression = 'g1 + g2'
+
+
+class Blend(Boolean):
+
+    def __init__(self, shape1, shape2, blend=0.5):
+        super().__init__(shape1, shape2)
+        self.blend = blend
+        self.expression = 'b * g1 + (1 - b) * g2'
+
+
+class Divide(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+        self.expression = 'g1 / g2'
+
+
+class Multiply(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+        self.expression = 'g1 * g2'
+
+
+class SmoothUnion(Boolean):
+
+    def __init__(self, shape1, shape2, blend=4):
+        super().__init__(shape1, shape2)
+        self.blend = blend
+        self.expression = '-log(where((exp(-b*g1) + exp(-b*g2))>0.000, exp(-b*g1) + exp(-b*g2), 0.000))/b'
+
+
+class Subtract(Boolean):
+
+    def __init__(self, shape1, shape2):
+        super().__init__(shape1, shape2)
+        self.expression = 'g1 - g2'
+
