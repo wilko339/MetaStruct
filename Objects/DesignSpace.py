@@ -2,10 +2,9 @@ import numpy as np
 
 
 class DesignSpace:
+    DATA_TYPE = np.dtype('f4')
 
-    def __init__(self, res=100, xRes=0, yRes=0, zRes=0, xBounds=[-1, 1], yBounds=[-1, 1], zBounds=[-1, 1]):
-
-        self.data_type = np.dtype('f4')
+    def __init__(self, res=200, xRes=0, yRes=0, zRes=0, xBounds=[-1.1, 1.1], yBounds=[-1.1,1.1], zBounds=[-1.1,1.1]):
 
         self.xBounds = xBounds
         self.yBounds = yBounds
@@ -29,20 +28,20 @@ class DesignSpace:
         if self.xRes == 0:
 
             X, self.xStep = np.linspace(
-                self.xLower - offset, self.xUpper + offset, res, retstep=True, dtype=self.data_type)
+                self.xLower - offset, self.xUpper + offset, res, retstep=True, dtype=DesignSpace.DATA_TYPE)
             Y, self.yStep = np.linspace(
-                self.yLower - offset, self.yUpper + offset, res, retstep=True, dtype=self.data_type)
+                self.yLower - offset, self.yUpper + offset, res, retstep=True, dtype=DesignSpace.DATA_TYPE)
             Z, self.zStep = np.linspace(
-                self.zLower - offset, self.zUpper + offset, res, retstep=True, dtype=self.data_type)
+                self.zLower - offset, self.zUpper + offset, res, retstep=True, dtype=DesignSpace.DATA_TYPE)
 
         else:
 
             X, self.xStep = np.linspace(
-                self.xLower - offset, self.xUpper + offset, xRes, retstep=True, dtype=self.data_type)
+                self.xLower - offset, self.xUpper + offset, xRes, retstep=True, dtype=DesignSpace.DATA_TYPE)
             Y, self.yStep = np.linspace(
-                self.yLower - offset, self.yUpper + offset, yRes, retstep=True, dtype=self.data_type)
+                self.yLower - offset, self.yUpper + offset, yRes, retstep=True, dtype=DesignSpace.DATA_TYPE)
             Z, self.zStep = np.linspace(
-                self.zLower - offset, self.zUpper + offset, zRes, retstep=True, dtype=self.data_type)
+                self.zLower - offset, self.zUpper + offset, zRes, retstep=True, dtype=DesignSpace.DATA_TYPE)
 
         print('Generating Sample Grid in Design Space')
 
