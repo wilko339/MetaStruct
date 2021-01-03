@@ -1,6 +1,6 @@
-from Objects.Shapes.Spheroid import Spheroid
-import numpy as np
 import numexpr as ne
+
+from Objects.Shapes.Spheroid import Spheroid
 
 
 class Sphere(Spheroid):
@@ -13,4 +13,14 @@ class Sphere(Spheroid):
     def __repr__(self):
 
         return f'Sphere({self.x}, {self.y}, {self.z}, {self.r})'
+
+    def evaluatePoint(self, x, y, z):
+
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+
+        r = self.r
+
+        return ne.evaluate('sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2) -r')
 
