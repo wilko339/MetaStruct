@@ -1,13 +1,17 @@
-import numpy as np
-import numexpr as ne
-import skfmm
+import cProfile
+import io
 import math
-import visvis as vv
-import pymesh
+import pstats
+
+import numexpr as ne
+import numpy as np
 import numpy.linalg as LA
-from stl import mesh as msh
-from stl import Mode
+import pymesh
+import skfmm
+import visvis as vv
 from skimage import measure
+from stl import Mode
+from stl import mesh as msh
 
 
 class Geometry:
@@ -17,7 +21,6 @@ class Geometry:
         self.designSpace = designSpace
 
         if self.designSpace == None:
-
             raise ValueError('No specified design space.')
 
         self.x = 0
@@ -43,7 +46,6 @@ class Geometry:
     def compareLims(self):
 
         if min(self.xLims) < self.designSpace.xLower or max(self.xLims) > self.designSpace.xUpper:
-
             print(
                 '\n------------------------------------------------------------------\n')
 
@@ -52,7 +54,6 @@ class Geometry:
             print('------------------------------------------------------------------\n')
 
         if min(self.yLims) < self.designSpace.yLower or max(self.yLims) > self.designSpace.yUpper:
-
             print(
                 '\n------------------------------------------------------------------\n')
 
@@ -61,7 +62,6 @@ class Geometry:
             print('------------------------------------------------------------------\n')
 
         if min(self.zLims) < self.designSpace.zLower or max(self.zLims) > self.designSpace.zUpper:
-
             print(
                 '\n------------------------------------------------------------------\n')
 
@@ -80,7 +80,6 @@ class Geometry:
     def evaluateDistance(self):
 
         if not hasattr(self, 'evaluatedGrid'):
-
             self.evaluateGrid()
 
         print(f'Evaluating distance field for {self.name}...')
@@ -99,10 +98,9 @@ class Geometry:
 
         self.rotationAxis = ax
         theta = theta
-        rads = theta * (math.pi/180)
+        rads = theta * (math.pi / 180)
 
         if ax == 'x':
-
             self.transform[:, 0] = [1, 0, 0]
             self.transform[:, 1] = [0, math.cos(
                 rads), -math.sin(rads)]
@@ -110,7 +108,6 @@ class Geometry:
                 rads), math.cos(rads)]
 
         if ax == 'y':
-
             self.transform[:, 0] = [math.cos(
                 rads), 0, math.sin(rads)]
             self.transform[:, 1] = [0, 1, 0]
@@ -118,7 +115,6 @@ class Geometry:
                 rads), 0, math.cos(rads)]
 
         if ax == 'z':
-
             self.transform[:, 0] = [math.cos(
                 rads), -math.sin(rads), 0]
             self.transform[:, 1] = [math.sin(
@@ -131,21 +127,38 @@ class Geometry:
         m = ax[1]
         n = ax[2]
         theta = theta
-        rads = theta * (math.pi/180)
+        rads = theta * (math.pi / 180)
         var = 1 - math.cos(theta)
 
-        self.transform = [[l*l*var + math.cos(theta), m*l*var - n*math.sin(theta), n*l*var + m*math.sin(theta)],
-                          [l*m*var + n*math.sin(theta), m*m*var +
-                           math.cos(theta), n*m*var - l*math.sin(theta)],
-                          [l*n*var - m*math.sin(theta), m*n*var + l *
-                           math.sin(theta), n*n*var + math.cos(theta)]
-                          ]
+        self.transform = [
+            [l * l * var + math.cos(theta), m * l * var - n * math.sin(theta), n * l * var + m * math.sin(theta)],
+            [l * m * var + n * math.sin(theta), m * m * var +
+             math.cos(theta), n * m * var - l * math.sin(theta)],
+            [l * n * var - m * math.sin(theta), m * n * var + l *
+             math.sin(theta), n * n * var + math.cos(theta)]
+            ]
 
-    def evaluateGrid(self):
+    def profile(func):
+        def wrapper(*args, **kwargs):
+            pr = cProfile.Profile()
+            pr.enable()
+            retval = func(*args, **kwargs)
+            pr.disable()
+            s = io.StringIO()
+            sortby = 'cumulative'
+            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+            ps.print_stats()
+            print(s.getvalue())
+            return retval
 
-        print(f'Evaluating grid points for {self.name}...')
+        return wrapper
 
-        self.evaluatedGrid = self.evaluatePoint(self.XX, self.YY, self.ZZ)
+    #@profile
+    def evaluateGrid(self, verbose=True):
+        if verbose is True:
+            print(f'Evaluating grid points for {self.name}...')
+
+        self.evaluatedGrid = np.array(self.evaluatePoint(self.XX, self.YY, self.ZZ))
 
     def findSurface(self, level=0):
 
@@ -153,8 +166,11 @@ class Geometry:
 
         try:
 
-            self.verts, self.faces, self.normals, self.values = measure.marching_cubes(self.evaluatedGrid, level=level, spacing=(
-                self.yStep, self.zStep, self.xStep), allow_degenerate=False)
+            self.verts, self.faces, self.normals, self.values = measure.marching_cubes(self.evaluatedGrid, level=level,
+                                                                                       spacing=(
+                                                                                           self.yStep, self.zStep,
+                                                                                           self.xStep),
+                                                                                       allow_degenerate=False)
 
             self.verts = np.fliplr(self.verts)
 
@@ -168,7 +184,6 @@ class Geometry:
         self.compareLims()
 
         if not hasattr(self, 'evaluatedGrid'):
-
             self.evaluateGrid()
 
         if clip != None:
@@ -176,36 +191,30 @@ class Geometry:
             if clip == 'x':
 
                 if flipClip == False:
-
                     self.evaluatedGrid = np.maximum(
                         self.evaluatedGrid, self.XX - clipVal)
 
                 if flipClip == True:
-
                     self.evaluatedGrid = np.maximum(
                         self.evaluatedGrid, clipVal - self.XX)
 
             if clip == 'y':
 
                 if flipClip == False:
-
                     self.evaluatedGrid = np.maximum(
                         self.evaluatedGrid, self.ZZ - clipVal)
 
                 if flipClip == True:
-
                     self.evaluatedGrid = np.maximum(
                         self.evaluatedGrid, clipVal - self.ZZ)
 
             if clip == 'z':
 
                 if flipClip == False:
-
                     self.evaluatedGrid = np.maximum(
                         self.evaluatedGrid, self.YY - clipVal)
 
                 if flipClip == True:
-
                     self.evaluatedGrid = np.maximum(
                         self.evaluatedGrid, clipVal - self.YY)
 
@@ -237,7 +246,6 @@ class Geometry:
         self_intersections = pymesh.detect_self_intersection(out_mesh).shape[0]
 
         if self_intersections > 0:
-
             print(f'{self_intersections} detected, fixing...')
 
             out_mesh = pymesh.resolve_self_intersection(out_mesh)
@@ -325,7 +333,7 @@ class Geometry:
 
         return mesh
 
-    def saveMesh(self, filename=None, fileFormat='obj', quality='normal', package='numpy-stl'):
+    def saveMesh(self, filename: str = None, fileFormat: str = 'stl', quality: str = 'normal', package: str = 'numpy-stl') -> None:
 
         res = self.designSpace.res
         self.quality = quality
@@ -338,23 +346,18 @@ class Geometry:
         packages = ['pymesh', 'numpy-stl']
 
         if package not in packages:
-
             raise ValueError('Unrecognised mesh package defined.')
 
         if fileFormat not in formats:
-
             raise ValueError(f'"{fileFormat}" is not a supported file format.')
 
         if filename == None:
-
             self.filename = self.name + formats[fileFormat]
 
         if filename is not None:
-
             self.filename = filename + formats[fileFormat]
 
         if not hasattr(self, 'evaluatedGrid'):
-
             print('Evaluating Sample Points...')
 
             arr = self.evaluateGrid()
