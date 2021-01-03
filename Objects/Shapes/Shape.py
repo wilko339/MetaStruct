@@ -1,8 +1,5 @@
+from Objects.Booleans.Boolean import Intersection, Union, Difference, Multiply
 from Objects.Geometry import Geometry
-from Objects.Booleans.Intersection import Intersection
-from Objects.Booleans.Multiply import Multiply
-from Objects.Booleans.Union import Union
-from Objects.Booleans.Difference import Difference
 
 
 class Shape(Geometry):
@@ -62,8 +59,9 @@ class Shape(Geometry):
             float(n)
             return n
 
-        except:
-            raise ValueError(f'{n} != a number.')
+        except ValueError:
+            print(f'{n} != a number.')
+            raise
 
     def evaluatePoint(self, x, y, z):
         pass
