@@ -106,7 +106,7 @@ class Boolean(Geometry):
 
         self.setLims()
 
-    def evaluatePoint(self, x, y, z):
+    def evaluateGrid(self):
 
         for shape in self.shapes:
 
@@ -119,6 +119,13 @@ class Boolean(Geometry):
         if hasattr(self, 'blend'):
 
             b = self.blend
+
+        self.evaluatedGrid = ne.evaluate(self.expression)
+
+    def evaluatePoint(self, x, y, z):
+
+        g1 = self.shape1.evaluatePoint(x, y, z)
+        g2 = self.shape2.evaluatePoint(x, y, z)
 
         return ne.evaluate(self.expression)
 
