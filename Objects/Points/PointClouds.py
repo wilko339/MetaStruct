@@ -56,11 +56,10 @@ class FFPoints(PointCloud):
         self.generate_points(self.n_points)
 
 
-class PointsOnSphere:
+class PointsOnSphere(PointCloud):
 
     def __init__(self, n_points=50, sphere=None):
-        self.shape = sphere
-        self.n_points = n_points
+        super().__init__(n_points, shape=sphere, points=None)
         self.radius = self.shape.r
 
         self.xBounds = self.shape.designSpace.xBounds
