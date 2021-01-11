@@ -159,10 +159,15 @@ class Geometry:
             print(f'Evaluating grid points for {self.name}...')
 
         self.evaluatedGrid = np.array(self.evaluatePoint(self.XX, self.YY, self.ZZ))
+        self.gradient_grid = np.gradient(self.evaluatedGrid, self.designSpace.res)
 
     def findSurface(self, level=0):
 
         print(f'Extracting Isosurface (level = {level})...')
+
+        if not hasattr(self, 'evaluatedGrid'):
+
+            self.evaluateGrid()
 
         try:
 
@@ -170,14 +175,15 @@ class Geometry:
                                                                                        spacing=(
                                                                                            self.yStep, self.zStep,
                                                                                            self.xStep),
-                                                                                       allow_degenerate=False)
+                                                                 allow_degenerate=False)
 
             self.verts = np.fliplr(self.verts)
 
-        except:
 
+        except:
             raise ValueError(
                 f'No isosurface found at specified level ({level})')
+
 
     def previewModel(self, clip=None, clipVal=0, flipClip=False, level=0):
 
@@ -406,10 +412,6 @@ class Geometry:
                 FileNotFoundError(f'Cannot find "{self.filename}" in folder.')
 
             print(f'"{self.filename}" successfully exported.\n')
-
-    def wireLattice(self):
-
-        pass
 
     def convertToCylindrical(self):
 
