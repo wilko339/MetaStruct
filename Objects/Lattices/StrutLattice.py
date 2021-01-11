@@ -7,6 +7,8 @@ import numpy as np
 from hilbertcurve.hilbertcurve import HilbertCurve
 from scipy.spatial import Voronoi, Delaunay, ConvexHull
 from sklearn.neighbors import NearestNeighbors
+import pyvoro
+import progressbar
 
 from Objects.Shapes.Cube import Cube
 from Objects.Shapes.Line import Line
@@ -63,8 +65,20 @@ class StrutLattice(Shape):
 
         self.evaluatedGrid = initial_line.evaluatedGrid
 
-        for line in self.lines:
-            self.evaluatedGrid = next(self.newGrid(line))
+        widgets = [' [',
+                   progressbar.Timer(format='elapsed time: %(elapsed)s'),
+                   '] ',
+                   progressbar.Bar('*'), ' (',
+                   progressbar.ETA(), ') '
+                   ]
+
+        bar = progressbar.ProgressBar(max_value=len(self.lines),
+                                      widgets=widgets).start()
+
+        for i in range(1, len(self.lines)):
+            self.evaluatedGrid = next(self.newGrid(self.lines[i]))
+            bar.update(i)
+        bar.finish()
 
     def newGrid(self, line):
 
@@ -222,21 +236,31 @@ class VoronoiLattice(StrutLattice):
     def __init__(self, designSpace, point_cloud=None, r=0.02):
         super().__init__(designSpace, r, point_cloud)
 
-        self.voronoi = Voronoi(self.point_cloud.points, qhull_options='Qbb Qc Qx')
+        # self.voronoi = Voronoi(self.point_cloud.points, qhull_options='Qbb Qc Qx')
 
         self.xLims = self.point_cloud.shape.xLims
         self.yLims = self.point_cloud.shape.yLims
         self.zLims = self.point_cloud.shape.zLims
 
-        self.flat_ridges = [item for ridge in self.voronoi.ridge_vertices for item in ridge if item != -1]
+        self.voronoi = pyvoro.compute_voronoi(points=point_cloud.points, limits=[self.xLims, self.yLims, self.zLims], dispersion=2)
 
-        for i in range(len(self.flat_ridges)):
-            p1 = self.voronoi.vertices[self.flat_ridges[i]]
-            if i < len(self.flat_ridges) - 1:
-                p2 = self.voronoi.vertices[self.flat_ridges[i + 1]]
-            else:
-                p2 = self.voronoi.vertices[self.flat_ridges[0]]
-            self.lines.append([p1, p2])
+        cells = []
+
+        for cell in self.voronoi:
+            cell_verts = cell['vertices']
+            faces = cell['faces']
+
+            for face in faces:
+                verts = face['vertices']
+                for i in range(len(verts)):
+                    if i < len(verts)-1:
+                        self.lines.append(tuple([tuple(cell_verts[verts[i]]), tuple(cell_verts[verts[i+1]])]))
+                    else:
+                        self.lines.append(tuple([tuple(cell_verts[verts[i]]), tuple(cell_verts[verts[0]])]))
+
+        #TODO Remove duplicated lines from self.lines
+
+        self.lines = list(set(self.lines))
 
         self.generateLattice()
 
@@ -284,3 +308,11 @@ class RegularStrutLattice(StrutLattice):
             self.lines.append([p1, p2])
 
         self.generateLattice()
+
+def clamp(n, a, b):
+    if n < a:
+        return a
+    elif n > b:
+        return b
+    else:
+        return n
