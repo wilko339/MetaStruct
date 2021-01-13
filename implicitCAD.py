@@ -1,41 +1,27 @@
 from Objects.DesignSpace import DesignSpace
-from Objects.Points.PointClouds import LHSPoints, RandomPoints
-from Objects.Lattices.StrutLattice import VoronoiLattice, DelaunayLattice
-from Objects.Shapes.Cube import Cube
+from Objects.Lattices.Diamond import Diamond
+from Objects.Lattices.Primitive import Primitive
+from Objects.Shapes.Cuboid import Cuboid
 from Objects.Shapes.Sphere import Sphere
 from Objects.Shapes.HollowSphere import HollowSphere
+from Functions.ModifierArray import createModifierArray
 import numpy as np
 
 
 def main():
 
-    ds = DesignSpace(res=200)
+    ds = DesignSpace(res=400)
 
-    region = Cube(ds)
+    region = Cuboid(ds, xd=0.5, yd=1, zd=0.5)
 
-    points = LHSPoints(20, region)
+    lattice = Primitive(ds, nx=3, nz=3, vf=0.3)
 
-    # print(points.points)
-    #
-    # corners = np.array([
-    #     [-1, -1, -1],
-    #     [-1, -1, 1],
-    #     [-1, 1, 1],
-    #     [-1, 1, -1],
-    #     [1, 1, -1],
-    #     [1, 1, 1],
-    #     [1, -1, 1],
-    #     [1, -1, -1]
-    # ])
-    #
-    # for corner in corners:
-    #
-    #     points.points = np.append(points.points, np.array([corner]), axis=0)
+    lattice.ny = createModifierArray(lattice, 1.5, 3, 'y')
 
-    latt = VoronoiLattice(ds, points)
+    region /= lattice
 
-    latt.previewModel()
+    region.saveMesh('graded_primitive')
+
 
 if __name__ == '__main__':
     main()
-
