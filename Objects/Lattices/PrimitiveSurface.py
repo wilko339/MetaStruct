@@ -16,7 +16,8 @@ class PrimitiveSurface(Lattice):
         t = self.vf
 
         expr = '-(cos(kx*(x-x0)) + \
-                 cos(ky*(y-y0)) - \
+                cos(ky*(y-y0)) + \
+                cos(kz*(z-z0)) - \
                   t) '
 
         return ne.evaluate(expr)
