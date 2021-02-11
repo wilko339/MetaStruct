@@ -30,9 +30,9 @@ class Cube(Cuboid):
 
         scale = dim / (dim + round_r)
 
-        x_abs = ne.evaluate('abs(x/scale)-dim')
-        y_abs = ne.evaluate('abs(y/scale)-dim')
-        z_abs = ne.evaluate('abs(z/scale)-dim')
+        x_abs = ne.evaluate('abs((x-x0)/scale)-dim')
+        y_abs = ne.evaluate('abs((y-y0)/scale)-dim')
+        z_abs = ne.evaluate('abs((z-z0)/scale)-dim')
 
         x_max = self.ne_max(x_abs, 0.0)
         y_max = self.ne_max(y_abs, 0.0)
