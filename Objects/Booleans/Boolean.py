@@ -48,6 +48,7 @@ class Boolean(Geometry):
         self.name = shape1.name + '_' + shape2.name
 
         self.expression = None
+        ne.set_num_threads(ne.ncores)
 
     def setLims(self):
 
@@ -121,6 +122,7 @@ class Boolean(Geometry):
             b = self.blend
 
         self.evaluatedGrid = ne.evaluate(self.expression)
+        self.evaluatedList = self.evaluatedGrid.flatten()
 
     def evaluatePoint(self, x, y, z):
 
@@ -193,4 +195,3 @@ class Subtract(Boolean):
     def __init__(self, shape1, shape2):
         super().__init__(shape1, shape2)
         self.expression = 'g1 - g2'
-

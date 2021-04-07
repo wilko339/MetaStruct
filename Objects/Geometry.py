@@ -131,12 +131,13 @@ class Geometry:
         var = 1 - math.cos(theta)
 
         self.transform = [
-            [l * l * var + math.cos(theta), m * l * var - n * math.sin(theta), n * l * var + m * math.sin(theta)],
+            [l * l * var + math.cos(theta), m * l * var - n *
+             math.sin(theta), n * l * var + m * math.sin(theta)],
             [l * m * var + n * math.sin(theta), m * m * var +
              math.cos(theta), n * m * var - l * math.sin(theta)],
             [l * n * var - m * math.sin(theta), m * n * var + l *
              math.sin(theta), n * n * var + math.cos(theta)]
-            ]
+        ]
 
     def profile(func):
         def wrapper(*args, **kwargs):
@@ -153,13 +154,13 @@ class Geometry:
 
         return wrapper
 
-    #@profile
+    @profile
     def evaluateGrid(self, verbose=True):
         if verbose is True:
             print(f'Evaluating grid points for {self.name}...')
 
-        self.evaluatedGrid = np.array(self.evaluatePoint(self.XX, self.YY, self.ZZ))
-        self.gradient_grid = np.gradient(self.evaluatedGrid, self.designSpace.res)
+        self.evaluatedGrid = np.array(
+            self.evaluatePoint(self.XX, self.YY, self.ZZ))
 
     def findSurface(self, level=0):
 
@@ -175,15 +176,13 @@ class Geometry:
                                                                                        spacing=(
                                                                                            self.yStep, self.zStep,
                                                                                            self.xStep),
-                                                                 allow_degenerate=False)
+                                                                                       allow_degenerate=False)
 
             self.verts = np.fliplr(self.verts)
-
 
         except:
             raise ValueError(
                 f'No isosurface found at specified level ({level})')
-
 
     def previewModel(self, clip=None, clipVal=0, flipClip=False, level=0):
 

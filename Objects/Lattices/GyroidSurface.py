@@ -1,6 +1,5 @@
-from Objects.Lattices.Lattice import Lattice
-
 import numexpr as ne
+from Objects.Lattices.Lattice import Lattice
 
 
 class GyroidSurface(Lattice):
@@ -21,10 +20,13 @@ class GyroidSurface(Lattice):
         ky = self.ky
         kz = self.kz
         vf = self.vf
+
         t = ne.evaluate('(vf-0.501)/0.3325')
 
         expr = 'sin(kx*(x-x0))*cos(ky*(y-y0)) + \
                 sin(ky * (y - y0)) * cos(kz * (z - z0)) + \
                 sin(kz*(z-z0))*cos(kx*(x-x0)) - t '
+
+        ne.set_num_threads(ne.ncores)
 
         return ne.evaluate(expr)
