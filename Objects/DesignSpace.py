@@ -74,7 +74,7 @@ class DesignSpace:
         self.x_grid, self.y_grid, self.z_grid = np.meshgrid(X,
                                                             Y,
                                                             Z,
-                                                            indexing='xy')
+                                                            indexing='ij')
 
         self.coordinate_list = np.empty(
             (self.resolution * self.resolution * self.resolution, 3))
