@@ -8,12 +8,12 @@ class GyroidNetwork(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
         vf = 1 - self.vf
 
-        lattice = GyroidSurface(self.designSpace, self.x, self.y, self.z, self.nx,
+        lattice = GyroidSurface(self.design_space, self.x, self.y, self.z, self.nx,
                                 self.ny, self.nz, self.lx, self.ly, self.lz, vf)
 
-        return -lattice.evaluatePoint(x, y, z)
+        return -lattice.evaluate_point(x, y, z)

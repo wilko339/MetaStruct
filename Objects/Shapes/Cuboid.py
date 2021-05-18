@@ -6,18 +6,18 @@ import numexpr as ne
 
 class Cuboid(Shape):
 
-    def __init__(self, designSpace, x=0, y=0, z=0, xd=1, yd=1.5, zd=1):
-        super().__init__(designSpace, x, y, z)
+    def __init__(self, design_space, x=0, y=0, z=0, xd=1, yd=1.5, zd=1):
+        super().__init__(design_space, x, y, z)
 
-        self.xd = self.paramCheck(xd)
-        self.yd = self.paramCheck(yd)
-        self.zd = self.paramCheck(zd)
+        self.xd = xd
+        self.yd = yd
+        self.zd = zd
 
-        self.xLims = np.array(
+        self.x_limits = np.array(
             [self.x - self.xd, self.x + self.xd])
-        self.yLims = np.array(
+        self.y_limits = np.array(
             [self.y - self.yd, self.y + self.yd])
-        self.zLims = np.array(
+        self.z_limits = np.array(
             [self.z - self.zd, self.z + self.zd])
 
     def __repr__(self):
@@ -28,7 +28,7 @@ class Cuboid(Shape):
 
         return super().__str__() + f'\nDimensions(x, y, z): ({self.xd}, {self.yd}, {self.zd})'
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
 
         x0 = self.x
         y0 = self.y

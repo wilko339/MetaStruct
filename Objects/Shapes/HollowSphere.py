@@ -1,28 +1,27 @@
 from Objects.Shapes.Shape import Shape
 from Objects.Shapes.Sphere import Sphere
 import numpy as np
-import numexpr as ne
 
 
 class HollowSphere(Shape):
 
-    def __init__(self, designSpace, x=0, y=0, z=0, r=1, t=0.3):
+    def __init__(self, design_space, x=0, y=0, z=0, r=1, t=0.3):
 
-        self.designSpace = designSpace
+        self.designSpace = design_space
 
         super().__init__(self.designSpace, x, y, z)
 
-        self.r = self.paramCheck(r)
-        self.t = self.paramCheck(t)
-        self.setLims()
+        self.r = r
+        self.t = t
+        self.set_limits()
 
-    def setLims(self):
+    def set_limits(self):
 
-        self.xLims = np.array(
+        self.x_limits = np.array(
             [self.x - self.r, self.x + self.r])
-        self.yLims = np.array(
+        self.y_limits = np.array(
             [self.y - self.r, self.y + self.r])
-        self.zLims = np.array(
+        self.z_limits = np.array(
             [self.z - self.r, self.z + self.r])
 
     def __repr__(self):
@@ -33,10 +32,10 @@ class HollowSphere(Shape):
 
         return super().__str__() + f'\nRadius: {self.r}\nWall Thickness: {self.t}'
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
 
         ball = Sphere(self.designSpace, self.x, self.y, self.z, self.r) - \
             Sphere(self.designSpace, self.x, self.y, self.z, self.r -
                    self.t)
 
-        return ball.evaluatePoint(x, y, z)
+        return ball.evaluate_point(x, y, z)

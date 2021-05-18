@@ -5,8 +5,8 @@ from Objects.Shapes.Cuboid import Cuboid
 
 class Cube(Cuboid):
 
-    def __init__(self, designSpace, x=0, y=0, z=0, dim=1, round_r=0):
-        super().__init__(designSpace, x, y, z, xd=dim, yd=dim, zd=dim)
+    def __init__(self, design_space, x=0, y=0, z=0, dim=1, round_r=0):
+        super().__init__(design_space, x, y, z, xd=dim, yd=dim, zd=dim)
 
         self.dim = dim
         self.round_r = round_r
@@ -20,7 +20,7 @@ class Cube(Cuboid):
     def ne_min(self, a, b):
         return ne.evaluate('where(a<b, a, b)')
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
         x0 = self.x
         y0 = self.y
         z0 = self.z

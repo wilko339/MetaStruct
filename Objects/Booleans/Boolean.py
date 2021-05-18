@@ -8,18 +8,10 @@ class Boolean(Geometry):
 
     def __init__(self, shape1, shape2):
 
-        if shape1.designSpace is not shape2.designSpace:
+        if shape1.design_space is not shape2.design_space:
             raise ValueError('Mismatching Design Spaces')
 
-        self.designSpace = shape1.designSpace
-
-        self.XX = self.designSpace.XX
-        self.YY = self.designSpace.YY
-        self.ZZ = self.designSpace.ZZ
-
-        self.xStep = self.designSpace.xStep
-        self.yStep = self.designSpace.yStep
-        self.zStep = self.designSpace.zStep
+        super().__init__(shape1.design_space)
 
         if shape1.morph == 'Lattice' and shape2.morph != 'Lattice':
             raise TypeError('Please enter Lattice Object as 2nd Argument.')
@@ -39,7 +31,7 @@ class Boolean(Geometry):
         self.shapesZmins = []
         self.shapesZmaxs = []
 
-        self.setLims()
+        self.set_limits()
 
         self.x = (shape1.x + shape2.x) / 2
         self.y = (shape1.z + shape2.y) / 2
@@ -48,12 +40,13 @@ class Boolean(Geometry):
         self.name = shape1.name + '_' + shape2.name
 
         self.expression = None
+        self.evaluated_grid = None
 
-    def setLims(self):
+    def set_limits(self):
 
-        self.xLims = [0., 0.]
-        self.yLims = [0., 0.]
-        self.zLims = [0., 0.]
+        self.x_limits = [0., 0.]
+        self.y_limits = [0., 0.]
+        self.z_limits = [0., 0.]
 
         if self.shape2.morph != 'Lattice':
 
@@ -65,16 +58,16 @@ class Boolean(Geometry):
                 self.shapesZmins.append(shape.zLims[0])
                 self.shapesZmaxs.append(shape.zLims[1])
 
-            self.xLims = [min(self.shapesXmins), max(self.shapesXmaxs)]
-            self.yLims = [min(self.shapesYmins), max(self.shapesYmaxs)]
-            self.zLims = [min(self.shapesZmins), max(self.shapesZmaxs)]
+            self.x_limits = [min(self.shapesXmins), max(self.shapesXmaxs)]
+            self.y_limits = [min(self.shapesYmins), max(self.shapesYmaxs)]
+            self.z_limits = [min(self.shapesZmins), max(self.shapesZmaxs)]
 
         if self.shape2.morph == 'Lattice':
             self.morph == 'Lattice'
 
-            self.xLims = self.shape1.xLims
-            self.yLims = self.shape1.yLims
-            self.zLims = self.shape1.zLims
+            self.x_limits = self.shape1.x_limits
+            self.y_limits = self.shape1.y_limits
+            self.z_limits = self.shape1.z_limits
 
     def __repr__(self):
 
@@ -96,7 +89,7 @@ class Boolean(Geometry):
 
         for shape in self.shapes:
 
-            if not hasattr(shape, 'evaluatedGrid'):
+            if not hasattr(shape, 'evaluated_grid'):
                 shape.evaluateGrid()
 
     def translate(self, x, y, z):
@@ -104,28 +97,28 @@ class Boolean(Geometry):
         for shape in self.shapes:
             shape.translate(x, y, z)
 
-        self.setLims()
+        self.set_limits()
 
-    def evaluateGrid(self):
+    def evaluate_grid(self):
 
         for shape in self.shapes:
 
-            if not hasattr(shape, 'evaluatedGrid'):
+            if not hasattr(shape, 'evaluated_grid'):
                 shape.evaluateGrid()
 
-        g1 = self.shape1.evaluatedGrid
-        g2 = self.shape2.evaluatedGrid
+        g1 = self.shape1.evaluated_grid
+        g2 = self.shape2.evaluated_grid
 
         if hasattr(self, 'blend'):
 
             b = self.blend
 
-        self.evaluatedGrid = ne.evaluate(self.expression)
+        self.evaluated_grid = ne.evaluate(self.expression)
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
 
-        g1 = self.shape1.evaluatePoint(x, y, z)
-        g2 = self.shape2.evaluatePoint(x, y, z)
+        g1 = self.shape1.evaluate_point(x, y, z)
+        g2 = self.shape2.evaluate_point(x, y, z)
 
         return ne.evaluate(self.expression)
 

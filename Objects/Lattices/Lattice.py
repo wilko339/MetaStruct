@@ -13,8 +13,8 @@ from Objects.Geometry import Geometry
 class Lattice(Geometry):
     morph = 'Lattice'
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.5):
-        super().__init__(designSpace)
+    def __init__(self, design_space, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.5):
+        super().__init__(design_space)
 
         self.name = self.__class__.__name__
 

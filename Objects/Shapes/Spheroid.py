@@ -5,12 +5,12 @@ import numexpr as ne
 
 class Spheroid(Shape):
 
-    def __init__(self, designSpace, x=0, y=0, z=0, xr=1, yr=2, zr=1, ):
-        super().__init__(designSpace, x, y, z)
+    def __init__(self, design_space, x=0, y=0, z=0, xr=1, yr=2, zr=1, ):
+        super().__init__(design_space, x, y, z)
 
-        self.xr = self.paramCheck(xr)
-        self.yr = self.paramCheck(yr)
-        self.zr = self.paramCheck(zr)
+        self.xr = parameter_check(xr)
+        self.yr = parameter_check(yr)
+        self.zr = parameter_check(zr)
 
         self.xLims = np.array(
             [self.x - self.xr, self.x + self.xr])
@@ -27,11 +27,7 @@ class Spheroid(Shape):
 
         return super().__str__() + f'\nRadii(xr, yr, zr): ({self.xr}, {self.yr}, {self.zr})'
 
-    def evaluatePoint(self, x, y, z):
-
-        if self.transform is not None:
-
-            x, y, z = self.transformInputs(x, y, z)
+    def evaluate_point(self, x, y, z):
 
         x0 = self.x
         y0 = self.y

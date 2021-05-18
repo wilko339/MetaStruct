@@ -7,14 +7,14 @@ import numexpr as ne
 
 class HollowCube(Shape):
 
-    def __init__(self, designSpace, x=0, y=0, z=0, dim=1, t=0.3):
-        super().__init__(designSpace, x, y, z)
+    def __init__(self, design_space, x=0, y=0, z=0, dim=1, t=0.3):
+        super().__init__(design_space, x, y, z)
 
-        self.dim = self.paramCheck(dim)
-        self.t = self.paramCheck(t)
-        self.setLims()
+        self.dim = parameter_check(dim)
+        self.t = parameter_check(t)
+        self.set_limits()
 
-    def setLims(self):
+    def set_limits(self):
 
         self.xLims = np.array(
             [self.x - self.dim, self.x + self.dim])
@@ -31,9 +31,9 @@ class HollowCube(Shape):
 
         return super().__str__() + f'\nCube Radius: {self.dim}\nWall Thickness: {self.t}'
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
 
         box = Cube(self.designSpace, self.x, self.y, self.z, self.dim) - \
             Cube(self.designSpace, self.x, self.y, self.z, self.dim - self.t)
 
-        return box.evaluatePoint(x, y, z)
+        return box.evaluate_point(x, y, z)

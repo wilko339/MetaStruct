@@ -11,13 +11,13 @@ class BCC(Lattice):
 
     # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6317040/pdf/materials-11-02411.pdf
 
-    def __init__(self, designSpace, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.2):
+    def __init__(self, design_space, x=0, y=0, z=0, nx=1, ny=1, nz=1, lx=1, ly=1, lz=1, vf=0.2):
 
         self.vf = vf
 
-        super().__init__(designSpace, x, y, z, nx, ny, nz, lx, ly, lz, vf)
+        super().__init__(design_space, x, y, z, nx, ny, nz, lx, ly, lz, vf)
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
         x0 = self.x

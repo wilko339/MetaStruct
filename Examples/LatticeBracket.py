@@ -12,13 +12,13 @@ def lattice_bracket():
     mesh = trimesh.load_mesh('D:\\ImplicitCAD\\Engine_Bracket.STL')
 
     voxels = mesh_to_sdf.mesh_to_voxels(
-        mesh, ds.res, surface_point_method='sample')
+        mesh, ds.resolution, surface_point_method='sample')
 
     shape = Shape(ds)
 
-    shape.evaluatedGrid = voxels
+    shape.evaluated_grid = voxels
 
-    shape.xLims = shape.yLims = shape.zLims = [-1, 1]
+    shape.x_limits = shape.y_limits = shape.z_limits = [-1, 1]
 
     shape /= Gyroid(ds)
 

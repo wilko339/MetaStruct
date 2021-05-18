@@ -6,27 +6,25 @@ class Shape(Geometry):
 
     morph = 'Shape'
 
-    def __init__(self, designSpace, x=0, y=0, z=0):
+    def __init__(self, design_space, x=0, y=0, z=0):
 
-        self.designSpace = designSpace
+        self.designSpace = design_space
 
         super().__init__(self.designSpace)
 
         self.name = self.__class__.__name__
 
-        self.x = self.paramCheck(x)
-        self.y = self.paramCheck(y)
-        self.z = self.paramCheck(z)
+        self.x = x
+        self.y = y
+        self.z = z
 
-        self.transform = None
+        self.XX = self.designSpace.x_grid
+        self.YY = self.designSpace.y_grid
+        self.ZZ = self.designSpace.z_grid
 
-        self.XX = self.designSpace.XX
-        self.YY = self.designSpace.YY
-        self.ZZ = self.designSpace.ZZ
+        self.x_limits = self.y_limits = self.z_limits = None
 
-    def setLims(self):
-
-        self.xLims = self.yLims = self.zLims = [0, 0]
+        self.evaluated_grid = self.evaluated_distance = None
 
     def __repr__(self):
 
@@ -52,16 +50,5 @@ class Shape(Geometry):
 
         return Multiply(self, other)
 
-    def paramCheck(self, n):
-
-        try:
-
-            float(n)
-            return n
-
-        except ValueError:
-            print(f'{n} != a number.')
-            raise
-
-    def evaluatePoint(self, x, y, z):
-        pass
+    def evaluate_point(self, x, y, z):
+        return self.evaluate_point(x, y, z)
