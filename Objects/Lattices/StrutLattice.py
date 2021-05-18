@@ -32,15 +32,15 @@ def profile(func):
 
 
 class StrutLattice(Shape):
-    def __init__(self, designSpace, r=0.02, point_cloud=None, blend=0):
-        super().__init__(designSpace)
+    def __init__(self, design_space, r=0.02, point_cloud=None, blend=0):
+        super().__init__(design_space)
         self.r = r
         self.n_lines = 0
         self.lines = []
         self.blend = blend
 
         if point_cloud is not None:
-            if point_cloud.points == []:
+            if not point_cloud.points:
                 raise ValueError('Point cloud has no points.')
             self.point_cloud = point_cloud
             self.points = self.point_cloud.points
@@ -61,9 +61,9 @@ class StrutLattice(Shape):
 
         print(f'Generating Lattice with {self.n_lines} lines...')
 
-        initial_line.evaluateGrid(verbose=False)
+        initial_line.evaluate_grid(verbose=False)
 
-        self.evaluatedGrid = initial_line.evaluatedGrid
+        self.evaluated_grid = initial_line.evaluated_grid
 
         widgets = [' [',
                    progressbar.Timer(format='elapsed time: %(elapsed)s'),
@@ -76,7 +76,7 @@ class StrutLattice(Shape):
                                       widgets=widgets).start()
 
         for i in range(1, len(self.lines)):
-            self.evaluatedGrid = next(self.newGrid(self.lines[i]))
+            self.evaluated_grid = next(self.newGrid(self.lines[i]))
             bar.update(i)
         bar.finish()
 
@@ -84,11 +84,11 @@ class StrutLattice(Shape):
 
         line = Line(self.designSpace, line[0], line[1], r=self.r)
 
-        line.evaluateGrid(verbose=False)
+        line.evaluate_grid(verbose=False)
 
-        line_grid = line.evaluatedGrid
+        line_grid = line.evaluated_grid
 
-        grid = self.evaluatedGrid
+        grid = self.evaluated_grid
 
         if self.blend == 0:
 
@@ -102,8 +102,8 @@ class StrutLattice(Shape):
 
 class RandomLattice(StrutLattice):
 
-    def __init__(self, designSpace, point_cloud, num_neighbours=4, radius=None, r=0.02):
-        super().__init__(designSpace, r, point_cloud)
+    def __init__(self, design_space, point_cloud, num_neighbours=4, radius=None, r=0.02):
+        super().__init__(design_space, r, point_cloud)
 
         self.num_neighbours = num_neighbours
         self.radius = radius
@@ -156,8 +156,8 @@ class RandomLattice(StrutLattice):
 
 class Hilbert(StrutLattice):
 
-    def __init__(self, designSpace, cube: Cube, n_dims: int = 3, iterations: int = 2, r: float = 0.02):
-        super().__init__(designSpace, r)
+    def __init__(self, design_space, cube: Cube, n_dims: int = 3, iterations: int = 2, r: float = 0.02):
+        super().__init__(design_space, r)
         self.n_dims = n_dims
         self.iterations = iterations
         self.xLims = cube.xLims
@@ -179,16 +179,16 @@ class Hilbert(StrutLattice):
 
 class DelaunayLattice(StrutLattice):
 
-    def __init__(self, designSpace, point_cloud=None, r=0.02):
-        super().__init__(designSpace, r, point_cloud)
+    def __init__(self, design_space, point_cloud=None, r=0.02):
+        super().__init__(design_space, r, point_cloud)
 
-        self.designSpace = designSpace
+        self.designSpace = design_space
         self.point_cloud = point_cloud
         self.delaunay = Delaunay(self.point_cloud.points, qhull_options='Qbb Qc Qx QJ')
 
-        self.xLims = self.point_cloud.shape.xLims
-        self.yLims = self.point_cloud.shape.yLims
-        self.zLims = self.point_cloud.shape.zLims
+        self.xLims = self.point_cloud.shape.x_limits
+        self.yLims = self.point_cloud.shape.y_limits
+        self.zLims = self.point_cloud.shape.z_limits
 
         for simplex in self.delaunay.simplices:
             line1 = [self.delaunay.points[simplex[0]], self.delaunay.points[simplex[1]]]
@@ -205,16 +205,16 @@ class DelaunayLattice(StrutLattice):
 
 class ConvexHullLattice(StrutLattice):
 
-    def __init__(self, designSpace, point_cloud=None, r=0.02):
-        super().__init__(designSpace, r, point_cloud)
+    def __init__(self, design_space, point_cloud=None, r=0.02):
+        super().__init__(design_space, r, point_cloud)
 
-        self.designSpace = designSpace
+        self.designSpace = design_space
         self.point_cloud = point_cloud
         self.convex_hull = ConvexHull(self.point_cloud.points)
 
-        self.xLims = self.point_cloud.shape.xLims
-        self.yLims = self.point_cloud.shape.yLims
-        self.zLims = self.point_cloud.shape.zLims
+        self.xLims = self.point_cloud.shape.x_limits
+        self.yLims = self.point_cloud.shape.y_limits
+        self.zLims = self.point_cloud.shape.z_limits
 
         self.flat_simplices = [item for simplex in self.convex_hull.simplices for item in simplex]
 
@@ -233,14 +233,14 @@ class ConvexHullLattice(StrutLattice):
 
 class VoronoiLattice(StrutLattice):
 
-    def __init__(self, designSpace, point_cloud=None, r=0.02):
-        super().__init__(designSpace, r, point_cloud)
+    def __init__(self, design_space, point_cloud=None, r=0.02):
+        super().__init__(design_space, r, point_cloud)
 
         # self.voronoi = Voronoi(self.point_cloud.points, qhull_options='Qbb Qc Qx')
 
-        self.xLims = self.point_cloud.shape.xLims
-        self.yLims = self.point_cloud.shape.yLims
-        self.zLims = self.point_cloud.shape.zLims
+        self.xLims = self.point_cloud.shape.x_limits
+        self.yLims = self.point_cloud.shape.y_limits
+        self.zLims = self.point_cloud.shape.z_limits
 
         self.voronoi = pyvoro.compute_voronoi(points=point_cloud.points, limits=[self.xLims, self.yLims, self.zLims], dispersion=2)
 
@@ -267,19 +267,19 @@ class VoronoiLattice(StrutLattice):
 
 class RegularStrutLattice(StrutLattice):
 
-    def __init__(self, designSpace, n_cells=[1, 1, 1], shape=None, r=0.05):
-        super().__init__(designSpace, r)
+    def __init__(self, design_space, n_cells=[1, 1, 1], shape=None, r=0.05):
+        super().__init__(design_space, r)
         self.shape = shape
-        self.origin = np.array((min(self.shape.xLims), min(self.shape.yLims), min(self.shape.zLims)))
+        self.origin = np.array((min(self.shape.x_limits), min(self.shape.y_limits), min(self.shape.z_limits)))
         self.n_cells = n_cells
 
-        self.xLims = self.shape.xLims
-        self.yLims = self.shape.yLims
-        self.zLims = self.shape.zLims
+        self.xLims = self.shape.x_limits
+        self.yLims = self.shape.y_limits
+        self.zLims = self.shape.z_limits
 
-        self.xScale = max(self.shape.xLims) - min(self.shape.xLims)
-        self.yScale = max(self.shape.yLims) - min(self.shape.yLims)
-        self.zScale = max(self.shape.zLims) - min(self.shape.zLims)
+        self.xScale = max(self.shape.x_limits) - min(self.shape.x_limits)
+        self.yScale = max(self.shape.y_limits) - min(self.shape.y_limits)
+        self.zScale = max(self.shape.z_limits) - min(self.shape.z_limits)
 
         self.generate_points()
 

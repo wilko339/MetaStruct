@@ -12,17 +12,17 @@ class PointCloud:
 
         self.shape = shape
 
-        self.xScale = max(self.shape.xLims) - min(self.shape.xLims)
-        self.yScale = max(self.shape.yLims) - min(self.shape.yLims)
-        self.zScale = max(self.shape.zLims) - min(self.shape.zLims)
+        self.xScale = max(self.shape.x_limits) - min(self.shape.x_limits)
+        self.yScale = max(self.shape.y_limits) - min(self.shape.y_limits)
+        self.zScale = max(self.shape.z_limits) - min(self.shape.z_limits)
 
     def generate_points(self, n_points):
-        self.points[:, 0] = self.points[:, 0] * self.xScale + min(self.shape.xLims)
-        self.points[:, 1] = self.points[:, 1] * self.yScale + min(self.shape.yLims)
-        self.points[:, 2] = self.points[:, 2] * self.zScale + min(self.shape.zLims)
+        self.points[:, 0] = self.points[:, 0] * self.xScale + min(self.shape.x_limits)
+        self.points[:, 1] = self.points[:, 1] * self.yScale + min(self.shape.y_limits)
+        self.points[:, 2] = self.points[:, 2] * self.zScale + min(self.shape.z_limits)
 
         if self.shape is not None:
-            point_values = self.shape.evaluatePoint(self.points[:, 0], self.points[:, 1], self.points[:, 2])
+            point_values = self.shape.evaluate_point(self.points[:, 0], self.points[:, 1], self.points[:, 2])
             mask = np.ma.masked_array(point_values <= 0)
             self.points = self.points[mask, :]
 
@@ -62,9 +62,9 @@ class PointsOnSphere(PointCloud):
         super().__init__(n_points, shape=sphere, points=None)
         self.radius = self.shape.r
 
-        self.xBounds = self.shape.designSpace.xBounds
-        self.yBounds = self.shape.designSpace.yBounds
-        self.zBounds = self.shape.designSpace.zBounds
+        self.xBounds = self.shape.design_space.x_bounds
+        self.yBounds = self.shape.design_space.y_bounds
+        self.zBounds = self.shape.design_space.z_bounds
 
         self.points = []
 

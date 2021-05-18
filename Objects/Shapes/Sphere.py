@@ -5,8 +5,8 @@ from Objects.Shapes.Spheroid import Spheroid
 
 class Sphere(Spheroid):
 
-    def __init__(self, designSpace, x=0, y=0, z=0, r=1):
-        super().__init__(designSpace, x, y, z, xr=r, yr=r, zr=r)
+    def __init__(self, design_space, x=0, y=0, z=0, r=1):
+        super().__init__(design_space, x, y, z, xr=r, yr=r, zr=r)
 
         self.r = r
 
@@ -14,7 +14,7 @@ class Sphere(Spheroid):
 
         return f'Sphere({self.x}, {self.y}, {self.z}, {self.r})'
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
 
         x0 = self.x
         y0 = self.y

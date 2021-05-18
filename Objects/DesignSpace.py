@@ -5,50 +5,79 @@ import numexpr as ne
 class DesignSpace:
     DATA_TYPE = np.dtype('f8')
 
-    def __init__(self, res=200, xRes=0, yRes=0, zRes=0, xBounds=[-1.1, 1.1], yBounds=[-1.1, 1.1], zBounds=[-1.1, 1.1]):
+    def __init__(self,
+                 resolution=200,
+                 x_resolution=0,
+                 y_resolution=0,
+                 z_resolution=0,
+                 x_bounds=[-1.1, 1.1],
+                 y_bounds=[-1.1, 1.1],
+                 z_bounds=[-1.1, 1.1]):
 
-        self.xBounds = xBounds
-        self.yBounds = yBounds
-        self.zBounds = zBounds
+        self.x_bounds = x_bounds
+        self.y_bounds = y_bounds
+        self.z_bounds = z_bounds
 
-        self.res = res
+        self.resolution = resolution
 
-        self.xRes = xRes
-        self.yRes = yRes
-        self.zRes = zRes
+        self.x_resolution = x_resolution
+        self.y_resolution = y_resolution
+        self.z_resolution = z_resolution
 
-        self.xLower = min(self.xBounds)
-        self.xUpper = max(self.xBounds)
-        self.yLower = min(self.yBounds)
-        self.yUpper = max(self.yBounds)
-        self.zLower = min(self.zBounds)
-        self.zUpper = max(self.zBounds)
+        self.x_lower = min(self.x_bounds)
+        self.x_upper = max(self.x_bounds)
+        self.y_lower = min(self.y_bounds)
+        self.y_upper = max(self.y_bounds)
+        self.z_lower = min(self.z_bounds)
+        self.z_upper = max(self.z_bounds)
 
-        self.n_threads = ne.ncores
+        offset = 0
 
-        print(self.n_threads)
+        if self.x_resolution == 0:
 
-        offset = 1e-6
-
-        if self.xRes == 0:
-
-            self.X, self.xStep = np.linspace(
-                self.xLower - offset, self.xUpper + offset, res, retstep=True, dtype=DesignSpace.DATA_TYPE)
-            self.Y, self.yStep = np.linspace(
-                self.yLower - offset, self.yUpper + offset, res, retstep=True, dtype=DesignSpace.DATA_TYPE)
-            self.Z, self.zStep = np.linspace(
-                self.zLower - offset, self.zUpper + offset, res, retstep=True, dtype=DesignSpace.DATA_TYPE)
+            X, self.x_step = np.linspace(self.x_lower - offset,
+                                         self.x_upper + offset,
+                                         resolution,
+                                         retstep=True,
+                                         dtype=DesignSpace.DATA_TYPE)
+            Y, self.y_step = np.linspace(self.y_lower - offset,
+                                         self.y_upper + offset,
+                                         resolution,
+                                         retstep=True,
+                                         dtype=DesignSpace.DATA_TYPE)
+            Z, self.z_step = np.linspace(self.z_lower - offset,
+                                         self.z_upper + offset,
+                                         resolution,
+                                         retstep=True,
+                                         dtype=DesignSpace.DATA_TYPE)
 
         else:
 
-            self.X, self.xStep = np.linspace(
-                self.xLower - offset, self.xUpper + offset, xRes, retstep=True, dtype=DesignSpace.DATA_TYPE)
-            self.Y, self.yStep = np.linspace(
-                self.yLower - offset, self.yUpper + offset, yRes, retstep=True, dtype=DesignSpace.DATA_TYPE)
-            self.Z, self.zStep = np.linspace(
-                self.zLower - offset, self.zUpper + offset, zRes, retstep=True, dtype=DesignSpace.DATA_TYPE)
+            X, self.x_step = np.linspace(self.x_lower - offset,
+                                         self.x_upper + offset,
+                                         x_resolution,
+                                         retstep=True,
+                                         dtype=DesignSpace.DATA_TYPE)
+            Y, self.y_step = np.linspace(self.y_lower - offset,
+                                         self.y_upper + offset,
+                                         y_resolution,
+                                         retstep=True,
+                                         dtype=DesignSpace.DATA_TYPE)
+            Z, self.z_step = np.linspace(self.z_lower - offset,
+                                         self.z_upper + offset,
+                                         z_resolution,
+                                         retstep=True,
+                                         dtype=DesignSpace.DATA_TYPE)
 
         print('Generating Sample Grid in Design Space')
 
-        self.XX, self.YY, self.ZZ = np.meshgrid(
-            self.X, self.Y, self.Z, indexing='ij')
+        self.x_grid, self.y_grid, self.z_grid = np.meshgrid(X,
+                                                            Y,
+                                                            Z,
+                                                            indexing='xy')
+
+        self.coordinate_list = np.empty(
+            (self.resolution * self.resolution * self.resolution, 3))
+        self.coordinate_list[:, 0] = self.x_grid.flatten()
+        self.coordinate_list[:, 1] = self.y_grid.flatten()
+        self.coordinate_list[:, 2] = self.z_grid.flatten()

@@ -3,7 +3,7 @@ import numpy as np
 
 def createModifierArray(shape, minVal=0., maxVal=1., dim='x', func=None):
 
-    res = shape.designSpace.res
+    res = shape.design_space.resolution
 
     arr2D = np.linspace(minVal, maxVal, res, dtype=np.dtype('f4'))
 

@@ -8,8 +8,8 @@ from Objects.Shapes.Shape import Shape
 
 class Line(Shape):
 
-    def __init__(self, designSpace, p1=[0,0,0], p2=[1,1,1], r=0.015):
-        super().__init__(designSpace, p1[0], p1[1], p1[2])
+    def __init__(self, design_space, p1=[0, 0, 0], p2=[1, 1, 1], r=0.015):
+        super().__init__(design_space, p1[0], p1[1], p1[2])
 
         self.p1 = Vector(p1)
         self.p2 = Vector(p2)
@@ -23,7 +23,7 @@ class Line(Shape):
 
         return ne.evaluate('where(where(num<b, num, b)>a, where(num<b, num, b), a)')
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
 
         pa = Vector([x, y, z]) - self.p1
         ba = self.p2 - self.p1

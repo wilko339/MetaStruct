@@ -8,10 +8,10 @@ class PrimitiveNetwork(Lattice):
     (nx, ny, nz)\t: Number of unit cells per length.\n\n\
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
-        lattice = PrimitiveSurface(self.designSpace,
+        lattice = PrimitiveSurface(self.design_space,
                                    self.x, self.y, self.z, self.nx, self.ny, self.nz, self.lx, self.ly, self.lz, -self.t)
 
-        return -lattice.evaluatePoint(x, y, z)
+        return -lattice.evaluate_point(x, y, z)

@@ -6,15 +6,15 @@ from Objects.Shapes.HollowSphere import HollowSphere
 
 def latticedSphereExample(outerRad=2, outerSkinThickness=0.1, innerRad=1, innerSkinThickness=0.1):
 
-    ds = DesignSpace(res=300)
+    ds = DesignSpace(resolution=300)
 
-    outerSkin = HollowSphere(designSpace=ds, r=outerRad, t=outerSkinThickness)
+    outerSkin = HollowSphere(design_space=ds, r=outerRad, t=outerSkinThickness)
 
     latticeSection = HollowSphere(r=outerRad-outerSkinThickness,
                                   t=outerRad - outerSkinThickness - innerRad,
-                                  designSpace=ds) / Gyroid(designSpace=ds)
+                                  design_space=ds) / Gyroid(designSpace=ds)
 
-    innerSkin = HollowSphere(r=innerRad, t=innerSkinThickness, designSpace=ds)
+    innerSkin = HollowSphere(r=innerRad, t=innerSkinThickness, design_space=ds)
 
     s1 = Union(outerSkin, Union(latticeSection, innerSkin))
 

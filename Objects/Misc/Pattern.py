@@ -24,7 +24,7 @@ class Pattern(Shape):
 
         self.shape = shape
 
-        self.setLims(self.sourceShape)
+        self.set_limits(self.sourceShape)
 
         self.createPattern()
 
@@ -40,7 +40,7 @@ class Pattern(Shape):
 
             self.shape += new_shape
 
-        self.setLims(self.shape)
+        self.set_limits(self.shape)
 
         for it in range(self.ny):
 
@@ -52,7 +52,7 @@ class Pattern(Shape):
 
             self.shape += new_shape
 
-        self.setLims(self.shape)
+        self.set_limits(self.shape)
 
         for it in range(self.nz):
 
@@ -64,23 +64,23 @@ class Pattern(Shape):
 
             self.shape += new_shape
 
-        self.setLims(self.shape)
+        self.set_limits(self.shape)
 
-    def setLims(self, obj):
+    def set_limits(self, obj):
 
-        self.xLims = obj.xLims
-        self.yLims = obj.yLims
-        self.zLims = obj.zLims
+        self.xLims = obj.x_limits
+        self.yLims = obj.y_limits
+        self.zLims = obj.z_limits
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
 
-        return self.shape.evaluatePoint(x, y, z)
+        return self.shape.evaluate_point(x, y, z)
 
     def translate(self, x, y, z):
 
         self.sourceShape.translate(x, y, z)
 
-        self.setLims(self.sourceShape)
+        self.set_limits(self.sourceShape)
 
         self.__init__(self.sourceShape, self.nx, self.ny,
                       self.nz, self.xd, self.yd, self.zd)

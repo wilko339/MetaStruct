@@ -10,7 +10,7 @@ class GyroidSurface(Lattice):
 
     # https://tinyurl.com/ybjoblaw
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
         x0 = self.x

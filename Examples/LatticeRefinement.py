@@ -8,7 +8,7 @@ import numpy as np
 
 def latticeRefinementExample():
 
-    ds = DesignSpace(res=300)
+    ds = DesignSpace(resolution=300)
 
     cuboid = Cuboid(ds, xd=2, yd=2, zd=0.5)
 
@@ -18,12 +18,12 @@ def latticeRefinementExample():
 
     sphere = Sphere(ds, r=1.5)
 
-    sphere.evaluateGrid()
+    sphere.evaluate_grid()
 
-    sphere.evaluatedGrid = np.where(
-        sphere.evaluatedGrid > 0, 0, sphere.evaluatedGrid)
+    sphere.evaluated_grid = np.where(
+        sphere.evaluated_grid > 0, 0, sphere.evaluated_grid)
 
-    refinedLattice.evaluatedGrid -= sphere.evaluatedGrid / 10
+    refinedLattice.evaluated_grid -= sphere.evaluated_grid / 10
 
     shape = cuboid / refinedLattice
 

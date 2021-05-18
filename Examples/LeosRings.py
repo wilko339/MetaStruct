@@ -6,8 +6,8 @@ from Objects.Lattices.GyroidNetwork import GyroidNetwork
 
 def leos_rings():
 
-    ds = DesignSpace(res=200, xRes=0, yRes=200, zRes=1200, xBounds=[-20, 20],
-                     yBounds=[-2.5, 2.5], zBounds=[-20, 20])
+    ds = DesignSpace(resolution=200, x_resolution=0, y_resolution=200, z_resolution=1200, x_bounds=[-20, 20],
+                     y_bounds=[-2.5, 2.5], z_bounds=[-20, 20])
 
     outer_removal_band = Cylinder(ds, r1=21, r2=21, l=2) - \
         Cylinder(ds, r1=19, r2=19, l=2)

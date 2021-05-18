@@ -11,7 +11,7 @@ class Diamond(Lattice):
     (lx, ly, lz)\t: Length of unit cell in each direction."""
 
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
         """Returns the function value at point (x, y, z)."""
 
         vf = self.vf
@@ -19,15 +19,15 @@ class Diamond(Lattice):
         vfHigh = ne.evaluate('0.5 + vf/2')
         vfLow = ne.evaluate('0.5 - vf/2')
 
-        lattice = DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx,
+        lattice = DiamondSurface(self.design_space, self.x, self.y, self.z, self.nx,
                                  self.ny, self.nz, self.lx, self.ly, self.lz, vfHigh) - \
-            DiamondSurface(self.designSpace, self.x, self.y, self.z, self.nx, self.ny,
+            DiamondSurface(self.design_space, self.x, self.y, self.z, self.nx, self.ny,
                            self.nz, self.lx, self.ly, self.lz, vfLow)
 
         for shape in lattice.shapes:
 
-            shape.XX = self.XX
-            shape.YY = self.YY
-            shape.ZZ = self.ZZ
+            shape.x_grid = self.x_grid
+            shape.y_grid = self.y_grid
+            shape.z_grid = self.z_grid
 
-        return lattice.evaluatePoint(x, y, z)
+        return lattice.evaluate_point(x, y, z)

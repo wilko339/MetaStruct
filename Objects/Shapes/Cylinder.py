@@ -6,12 +6,12 @@ import numpy as np
 
 class Cylinder(Shape):
 
-    def __init__(self, designSpace, x=0, y=0, z=0, r1=1, r2=1, l=1, ax='z'):
-        super().__init__(designSpace, x, y, z)
+    def __init__(self, design_space, x=0, y=0, z=0, r1=1, r2=1, l=1, ax='z'):
+        super().__init__(design_space, x, y, z)
 
-        self.r1 = self.paramCheck(r1)
-        self.r2 = self.paramCheck(r2)
-        self.l = self.paramCheck(l)
+        self.r1 = parameter_check(r1)
+        self.r2 = parameter_check(r2)
+        self.l = parameter_check(l)
         self.ax = ax
 
         if self.ax == 'z':
@@ -57,7 +57,7 @@ class Cylinder(Shape):
         if self.ax == 'y':
             return string + f'\nRadii(x, z): ({self.r1}, {self.r2})'
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
 
         x0 = self.x
         y0 = self.y

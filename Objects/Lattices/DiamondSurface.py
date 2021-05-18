@@ -5,7 +5,7 @@ import numexpr as ne
 
 class DiamondSurface(Lattice):
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
 
         x0 = self.x
         y0 = self.y

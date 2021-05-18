@@ -6,8 +6,8 @@ import numexpr as ne
 
 class Torus(Shape):
 
-    def __init__(self, designSpace, x=0, y=0, z=0, r1=1, r2=0.5):
-        super().__init__(designSpace, x, y, z)
+    def __init__(self, design_space, x=0, y=0, z=0, r1=1, r2=0.5):
+        super().__init__(design_space, x, y, z)
 
         self.x = x
         self.y = y
@@ -15,9 +15,9 @@ class Torus(Shape):
         self.r1 = r1
         self.r2 = r2
 
-        self.setLims()
+        self.set_limits()
 
-    def setLims(self):
+    def set_limits(self):
 
         self.xLims = np.array(
             [self.x - self.r1 - self.r2, self.x + self.r1 + self.r2])
@@ -26,7 +26,7 @@ class Torus(Shape):
         self.zLims = np.array(
             [self.z - self.r2, self.z + self.r2])
 
-    def evaluatePoint(self, x, y, z):
+    def evaluate_point(self, x, y, z):
 
         x0 = self.x
         y0 = self.y
