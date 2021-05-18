@@ -1,6 +1,25 @@
 from Objects.Shapes.Shape import Shape
 import numpy as np
 import igl
+import cProfile
+import pstats
+import io
+
+
+def profile(func):
+    def wrapper(*args, **kwargs):
+        pr = cProfile.Profile()
+        pr.enable()
+        retval = func(*args, **kwargs)
+        pr.disable()
+        s = io.StringIO()
+        sortby = 'cumulative'
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print(s.getvalue())
+        return retval
+
+    return wrapper
 
 
 class ImportedMesh(Shape):
@@ -15,16 +34,18 @@ class ImportedMesh(Shape):
 
         BV, BF = igl.bounding_box(self.vertices)
 
-        self.xLims = np.array([np.min(BV[:, 0]), np.max([BV[:, 0]])])
-        self.yLims = np.array([np.min(BV[:, 1]), np.max([BV[:, 1]])])
-        self.zLims = np.array([np.min(BV[:, 2]), np.max([BV[:, 2]])])
+        self.x_limits = np.array([np.min(BV[:, 0]), np.max([BV[:, 0]])])
+        self.y_limits = np.array([np.min(BV[:, 1]), np.max([BV[:, 1]])])
+        self.z_limits = np.array([np.min(BV[:, 2]), np.max([BV[:, 2]])])
 
-        print('Mesh Bounding Box:', self.xLims, self.yLims, self.zLims)
+        print('Mesh Bounding Box:', self.x_limits,
+              self.y_limits, self.z_limits)
 
-        self.evaluatedGrid = None
+        self.evaluated_grid = None
 
         self.calculate_signed_distances()
 
+    @profile
     def calculate_signed_distances(self):
 
         print('Calculating Signed Distances...')
@@ -32,8 +53,8 @@ class ImportedMesh(Shape):
         S, _, _ = igl.signed_distance(
             self.designSpace.coordinate_list, self.vertices, self.faces)
 
-        self.evaluatedGrid = S.reshape(
-            self.designSpace.res, self.designSpace.res, self.designSpace.res)
+        self.evaluated_grid = S.reshape(
+            self.designSpace.resolution, self.designSpace.resolution, self.designSpace.resolution)
 
     def evaluatePoint(self, x, y, z):
         raise NotImplementedError
