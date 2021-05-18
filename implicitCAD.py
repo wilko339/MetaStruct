@@ -12,7 +12,7 @@ import igl
 
 def main():
 
-    ds = DesignSpace(200, x_bounds=[-1, 180], y_bounds=[
+    ds = DesignSpace(100, x_bounds=[-1, 180], y_bounds=[
                      -1, 93], z_bounds=[-1, 112])
 
     bracket = ImportedMesh(ds, 'Engine_Bracket.stl')
