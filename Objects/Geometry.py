@@ -1,11 +1,8 @@
-import cProfile
-import io
-import pstats
 
 import numexpr as ne
 import numpy as np
 import numpy.linalg as LA
-import skfmm
+#import skfmm
 import visvis as vv
 from skimage import measure
 from stl import Mode
