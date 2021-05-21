@@ -1,3 +1,4 @@
+from igl.helpers import SIGNED_DISTANCE_TYPE_WINDING_NUMBER
 from Objects.Shapes.Shape import Shape
 import numpy as np
 import igl
@@ -32,7 +33,7 @@ class ImportedMesh(Shape):
         except ValueError:
             raise
 
-        BV, BF = igl.bounding_box(self.vertices)
+        BV, _ = igl.bounding_box(self.vertices)
 
         self.x_limits = np.array([np.min(BV[:, 0]), np.max([BV[:, 0]])])
         self.y_limits = np.array([np.min(BV[:, 1]), np.max([BV[:, 1]])])
