@@ -8,6 +8,7 @@ from skimage import measure
 from stl import Mode
 from stl import mesh as msh
 import igl
+from wildmeshing import Tetrahedralizer
 
 
 class Geometry:
@@ -119,10 +120,26 @@ class Geometry:
                                                                                            self.z_step),
                                                                                        allow_degenerate=False)
 
-
         except ValueError:
             print(f'No isosurface found at specified level ({level})')
             raise
+
+    def save_tet_mesh(self, filename):
+
+        if filename is None:
+            self.filename = self.name + '.msh'
+
+        if filename is not None:
+            if filename[:-4] != '.msh':
+                self.filename = filename + '.msh'
+
+        tetra = Tetrahedralizer(max_its=10)
+
+        tetra.set_mesh(self.verts, self.faces)
+
+        tetra.tetrahedralize()
+
+        tetra.save(self.filename)
 
     def previewModel(self, clip=None, clip_value=0, flip_clip=False, level=0):
 
@@ -187,14 +204,15 @@ class Geometry:
     def decimate_mesh(self, factor=0.8):
         if self.verts is None or self.faces is None:
             raise ValueError('No mesh, please use find_surface()')
-        
+
         assert (factor < 1 and factor > 0), 'Factor must be between 0 and 1'
 
         target = round(len(self.faces)*factor)
 
         print('Decimating mesh...')
-        
-        success, self.verts, self.faces, _, _ = igl.qslim(self.verts, self.faces, target)
+
+        success, self.verts, self.faces, _, _ = igl.qslim(
+            self.verts, self.faces, target)
 
         c = igl.orientable_patches(self.faces)
 
@@ -205,7 +223,6 @@ class Geometry:
         if not success:
             print('Decimation did not reach target factor')
 
-    
     def save_mesh(self, filename: str = None, file_format: str = 'stl') -> None:
 
         formats = {'obj': '.obj',
