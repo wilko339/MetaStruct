@@ -3,7 +3,7 @@ import numexpr as ne
 
 
 class DesignSpace:
-    DATA_TYPE = np.dtype('f8')
+    DATA_TYPE = np.float32
 
     def __init__(self,
                  resolution=200,
@@ -77,7 +77,7 @@ class DesignSpace:
                                                             indexing='ij')
 
         self.coordinate_list = np.empty(
-            (self.resolution * self.resolution * self.resolution, 3))
+            (self.resolution * self.resolution * self.resolution, 3), dtype=np.float32)
         self.coordinate_list[:, 0] = self.x_grid.flatten()
         self.coordinate_list[:, 1] = self.y_grid.flatten()
         self.coordinate_list[:, 2] = self.z_grid.flatten()
