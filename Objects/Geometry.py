@@ -190,11 +190,11 @@ class Geometry:
 
         a = vv.gca()
 
-        a.axis.xLabel = 'x'
+        a.axis.xLabel = 'y'
 
-        a.axis.yLabel = 'y'
+        a.axis.yLabel = 'z'
 
-        a.axis.zLabel = 'z'
+        a.axis.zLabel = 'x'
 
         a.bgcolor = 'w'
         a.axis.axisColor = 'k'
