@@ -1,15 +1,13 @@
-import cProfile
-import io
-import pstats
 
 import numexpr as ne
 import numpy as np
 import numpy.linalg as LA
-import skfmm
+#import skfmm
 import visvis as vv
 from skimage import measure
 from stl import Mode
 from stl import mesh as msh
+import igl
 
 
 class Geometry:
@@ -121,7 +119,6 @@ class Geometry:
                                                                                            self.z_step),
                                                                                        allow_degenerate=False)
 
-            self.verts = np.fliplr(self.verts)
 
         except ValueError:
             print(f'No isosurface found at specified level ({level})')
@@ -166,7 +163,9 @@ class Geometry:
                     self.evaluated_grid = np.maximum(
                         self.evaluated_grid, clip_value - self.y_grid)
 
-        self.findSurface(level=level)
+        if self.verts is None or self.faces is None:
+
+            self.findSurface(level=level)
 
         vv.figure(1)
 
@@ -185,21 +184,34 @@ class Geometry:
 
         vv.use().Run()
 
-    def save_mesh(self, filename: str = None, file_format: str = 'stl', quality: str = 'normal',
-                  package: str = 'numpy-stl') -> None:
+    def decimate_mesh(self, factor=0.8):
+        if self.verts is None or self.faces is None:
+            raise ValueError('No mesh, please use find_surface()')
+        
+        assert (factor < 1 and factor > 0), 'Factor must be between 0 and 1'
 
-        res = self.design_space.resolution
-        self.quality = quality
+        target = round(len(self.faces)*factor)
+
+        print('Decimating mesh...')
+        
+        success, self.verts, self.faces, _, _ = igl.qslim(self.verts, self.faces, target)
+
+        c = igl.orientable_patches(self.faces)
+
+        self.faces, I = igl.orient_outward(self.verts, self.faces, c[0])
+
+        if success:
+            print('Mesh decimated')
+        if not success:
+            print('Decimation did not reach target factor')
+
+    
+    def save_mesh(self, filename: str = None, file_format: str = 'stl') -> None:
 
         formats = {'obj': '.obj',
                    'stl': '.stl',
                    '.stl': '.stl',
                    '.obj': '.obj'}
-
-        packages = ['numpy-stl']
-
-        if package not in packages:
-            raise ValueError('Unrecognised mesh package defined.')
 
         if file_format not in formats:
             raise ValueError(
@@ -211,33 +223,23 @@ class Geometry:
         if filename is not None:
             self.filename = filename + formats[file_format]
 
-        print('Executing Marching Cubes Algorithm...')
+        if self.faces is None or self.verts is None:
 
-        self.findSurface()
+            print('Executing Marching Cubes Algorithm...')
+            self.findSurface()
 
-        print('Generating Mesh...')
+        print('Saving Mesh...')
 
-        if package == 'numpy-stl':
+        igl.write_triangle_mesh(self.filename, self.verts, self.faces)
 
-            self.mesh = msh.Mesh(
-                np.zeros(self.faces.shape[0], dtype=msh.Mesh.dtype))
+        try:
+            f = open(self.filename)
+            f.close()
+        except FileNotFoundError:
+            print(f'Cannot find "{self.filename}" in folder.')
+            raise
 
-            self.verts = np.fliplr(self.verts)
-
-            for i, f in enumerate(self.faces):
-                for j in range(3):
-                    self.mesh.vectors[i][j] = self.verts[f[j], :]
-
-            self.mesh.save(f'{self.filename}', mode=Mode.ASCII)
-
-            try:
-                f = open(filename)
-                f.close()
-            except FileNotFoundError:
-                print(f'Cannot find "{self.filename}" in folder.')
-                raise
-
-            print(f'"{self.filename}" successfully exported.\n')
+        print(f'"{self.filename}" successfully exported.')
 
     def convertToCylindrical(self):
 

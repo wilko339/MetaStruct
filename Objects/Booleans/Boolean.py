@@ -41,6 +41,7 @@ class Boolean(Geometry):
 
         self.expression = None
         self.evaluated_grid = None
+        self.blend = None
 
     def set_limits(self):
 
@@ -103,13 +104,13 @@ class Boolean(Geometry):
 
         for shape in self.shapes:
 
-            if not hasattr(shape, 'evaluated_grid'):
-                shape.evaluateGrid()
+            if shape.evaluated_grid is None:
+                shape.evaluate_grid()
 
         g1 = self.shape1.evaluated_grid
         g2 = self.shape2.evaluated_grid
 
-        if hasattr(self, 'blend'):
+        if self.blend is not None:
 
             b = self.blend
 
