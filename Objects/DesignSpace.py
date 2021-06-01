@@ -31,7 +31,7 @@ class DesignSpace:
         self.z_lower = min(self.z_bounds)
         self.z_upper = max(self.z_bounds)
 
-        offset = 0
+        offset = 0.1
 
         if self.x_resolution == 0:
 
