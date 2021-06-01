@@ -24,7 +24,7 @@ class Geometry:
         self.y = 0
         self.z = 0
 
-        self.mesh = None
+        self.verts = self.faces = None
 
         self.x_grid = self.design_space.x_grid
         self.y_grid = self.design_space.y_grid
@@ -260,9 +260,9 @@ class Geometry:
 
     def convertToCylindrical(self):
 
-        XX = self.x_grid
-        YY = self.y_grid
-        ZZ = self.z_grid
+        x_grid = self.x_grid
+        y_grid = self.y_grid
+        z_grid = self.z_grid
 
         r = ne.evaluate('sqrt(x_grid**2 + y_grid**2)')
         az = ne.evaluate('arctan2(y_grid, x_grid)')
