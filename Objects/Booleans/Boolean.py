@@ -52,12 +52,12 @@ class Boolean(Geometry):
         if self.shape2.morph != 'Lattice':
 
             for shape in self.shapes:
-                self.shapesXmins.append(shape.xLims[0])
-                self.shapesXmaxs.append(shape.xLims[1])
-                self.shapesYmins.append(shape.yLims[0])
-                self.shapesYmaxs.append(shape.yLims[1])
-                self.shapesZmins.append(shape.zLims[0])
-                self.shapesZmaxs.append(shape.zLims[1])
+                self.shapesXmins.append(shape.x_limits[0])
+                self.shapesXmaxs.append(shape.x_limits[1])
+                self.shapesYmins.append(shape.y_limits[0])
+                self.shapesYmaxs.append(shape.y_limits[1])
+                self.shapesZmins.append(shape.z_limits[0])
+                self.shapesZmaxs.append(shape.z_limits[1])
 
             self.x_limits = [min(self.shapesXmins), max(self.shapesXmaxs)]
             self.y_limits = [min(self.shapesYmins), max(self.shapesYmaxs)]
