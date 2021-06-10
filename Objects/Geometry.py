@@ -2,13 +2,13 @@
 import numexpr as ne
 import numpy as np
 import numpy.linalg as LA
-#import skfmm
-import visvis as vv
 from skimage import measure
 from stl import Mode
 from stl import mesh as msh
 import igl
 from wildmeshing import Tetrahedralizer
+
+import mayavi.mlab as ml
 
 
 class Geometry:
@@ -141,7 +141,10 @@ class Geometry:
 
         tetra.save(self.filename)
 
-    def previewModel(self, clip=None, clip_value=0, flip_clip=False, level=0):
+    def previewModel(self, clip=None, clip_value=0, flip_clip=False, mode='surface', level=0, rgb=(102, 204, 153)):
+
+        assert mode in [
+            'volume', 'surface'], 'Invalid mode selected, use either "volume" or "surface".'
 
         self.compare_limits()
 
@@ -180,26 +183,21 @@ class Geometry:
                     self.evaluated_grid = np.maximum(
                         self.evaluated_grid, clip_value - self.y_grid)
 
-        if self.verts is None or self.faces is None:
+        if mode == 'volume':
 
-            self.findSurface(level=level)
+            ml.pipeline.volume(ml.pipeline.scalar_field(
+                self.evaluated_grid), vmin=0.1, vmax=0.9)
 
-        vv.figure(1)
+        if mode == 'surface':
 
-        vv.mesh(self.verts, faces=self.faces, normals=self.normals)
+            if self.verts is None or self.faces is None:
 
-        a = vv.gca()
+                self.findSurface(level=level)
 
-        a.axis.xLabel = 'y'
+            ml.triangular_mesh(
+                self.verts[:, 0], self.verts[:, 1], self.verts[:, 2], self.faces, color=tuple(c/255 for c in rgb))
 
-        a.axis.yLabel = 'z'
-
-        a.axis.zLabel = 'x'
-
-        a.bgcolor = 'w'
-        a.axis.axisColor = 'k'
-
-        vv.use().Run()
+        ml.show()
 
     def decimate_mesh(self, factor=0.8):
         if self.verts is None or self.faces is None:
