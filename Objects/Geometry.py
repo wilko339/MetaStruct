@@ -7,6 +7,7 @@ from stl import Mode
 from stl import mesh as msh
 import igl
 from wildmeshing import Tetrahedralizer
+import skfmm
 
 import mayavi.mlab as ml
 
