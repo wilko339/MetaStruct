@@ -142,7 +142,7 @@ class Geometry:
 
         tetra.save(self.filename)
 
-    def previewModel(self, clip=None, clip_value=0, flip_clip=False, mode='surface', level=0, rgb=(102, 204, 153)):
+    def previewModel(self, clip=None, clip_value=0, flip_clip=False, mode='surface', level=0, rgb=(22, 94, 111)):
 
         assert mode in [
             'volume', 'surface'], 'Invalid mode selected, use either "volume" or "surface".'
@@ -184,10 +184,16 @@ class Geometry:
                     self.evaluated_grid = np.maximum(
                         self.evaluated_grid, clip_value - self.y_grid)
 
+        ml.figure(bgcolor=(0, 0, 0))
+
         if mode == 'volume':
 
-            ml.pipeline.volume(ml.pipeline.scalar_field(
-                self.evaluated_grid), vmin=0.1, vmax=0.9)
+            scalar_field = ml.pipeline.scalar_field(
+                self.evaluated_grid)
+
+            scalar_field.spacing = [self.x_step, self.y_step, self.z_step]
+
+            ml.pipeline.volume(scalar_field)
 
         if mode == 'surface':
 
