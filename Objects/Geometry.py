@@ -223,6 +223,27 @@ class Geometry:
         if not success:
             print('Decimation did not reach target factor')
 
+    def subdivide_mesh(self, divs=1):
+        if self.verts is None or self.faces is None:
+            raise ValueError('No mesh, please use find_surface()')
+
+        print('Subdividing mesh...')
+        
+        self.verts, self.faces = igl.loop(self.verts, self.faces, divs)
+    
+    def smooth_mesh(self, iterations=3, factor=0.25):
+        
+        if self.verts is None or self.faces is None:
+            raise ValueError('No mesh, please use find_surface()')
+
+        print('Smoothing mesh...')
+
+        for iter in range(iterations):
+            print(f'Iteration {iter}...')
+            self.subdivide_mesh()
+            self.decimate_mesh(factor)
+        print('Finished smoothing')
+
     def save_mesh(self, filename: str = None, file_format: str = 'stl') -> None:
 
         formats = {'obj': '.obj',
