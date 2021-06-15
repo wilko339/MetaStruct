@@ -37,6 +37,10 @@ def leos_rings():
 
             latticed = lattice_region / lattice
 
+            latticed.previewModel(mode='volume')
+
+            raise
+
             latticed.findSurface()
 
             latticed.decimate_mesh(0.2)

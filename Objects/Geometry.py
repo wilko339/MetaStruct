@@ -184,7 +184,7 @@ class Geometry:
                     self.evaluated_grid = np.maximum(
                         self.evaluated_grid, clip_value - self.y_grid)
 
-        ml.figure(bgcolor=(0, 0, 0))
+        #ml.figure(bgcolor=(0, 0, 0))
 
         if mode == 'volume':
 
@@ -233,11 +233,11 @@ class Geometry:
             raise ValueError('No mesh, please use find_surface()')
 
         print('Subdividing mesh...')
-        
+
         self.verts, self.faces = igl.loop(self.verts, self.faces, divs)
-    
+
     def smooth_mesh(self, iterations=3, factor=0.25):
-        
+
         if self.verts is None or self.faces is None:
             raise ValueError('No mesh, please use find_surface()')
 
