@@ -6,6 +6,10 @@ import cProfile
 import pstats
 import io
 
+from pathlib import Path
+
+SAVED_MESHES_FOLDER = Path(__file__).parent.parent.parent
+
 
 def profile(func):
     def wrapper(*args, **kwargs):
@@ -24,10 +28,15 @@ def profile(func):
 
 
 class ImportedMesh(Shape):
-    def __init__(self, designSpace, filepath):
+    def __init__(self, designSpace, filepath, save_field=True):
+
+        working_dir = Path.cwd()
+
+        self.save_field = save_field
+        self.filepath = filepath
+
         super().__init__(designSpace, x=0, y=0, z=0)
         try:
-            self.filepath = filepath
             self.vertices, self.faces = igl.read_triangle_mesh(filepath)
             print('Mesh Loaded')
         except ValueError:
@@ -56,6 +65,18 @@ class ImportedMesh(Shape):
 
         self.evaluated_grid = S.reshape(
             self.designSpace.resolution, self.designSpace.resolution, self.designSpace.resolution)
+
+        if self.save_field is True:
+
+            filename = (SAVED_MESHES_FOLDER /
+                        self.filepath.stem).with_suffix('.npy')
+
+            try:
+                print('Saving sdf...')
+                np.save(filename)
+
+            except:
+                raise
 
     def evaluatePoint(self, x, y, z):
         raise NotImplementedError
