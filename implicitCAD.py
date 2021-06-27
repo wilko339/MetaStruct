@@ -20,7 +20,7 @@ def main():
 
     #bunny /= lattice
 
-    bunny.previewModel(mode='volume')
+    # bunny.previewModel(mode='volume')
 
 
 if __name__ == '__main__':
