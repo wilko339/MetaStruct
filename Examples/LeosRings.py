@@ -2,43 +2,56 @@ from Objects.DesignSpace import DesignSpace
 from Objects.Shapes.Cylinder import Cylinder
 import math
 from Objects.Lattices.GyroidNetwork import GyroidNetwork
+from Objects.Lattices.Gyroid import Gyroid
+from Objects.Lattices.DoubleGyroidNetwork import DoubleGyroidNetwork
+from Objects.Lattices.BCC import BCC
+from Objects.Lattices.Diamond import Diamond
+
+import igl
 
 
 def leos_rings():
 
-    ds = DesignSpace(resolution=500, x_resolution=0, y_resolution=200, z_resolution=1200, x_bounds=[-20, 20],
-                     y_bounds=[-20, 20], z_bounds=[-7, 7])
+    height = 11
 
-    outer_removal_band = Cylinder(ds, r1=21, r2=21, l=5) - \
-        Cylinder(ds, r1=19, r2=19, l=5)
+    ds = DesignSpace(resolution=200, x_resolution=0, y_resolution=600, z_resolution=300, x_bounds=[-30, 30],
+                     y_bounds=[-30, 30], z_bounds=[-5.5, 5.5])
 
-    inner_removal_band = Cylinder(ds, r1=16, r2=16, l=5) - \
-        Cylinder(ds, r1=14, r2=14, l=5)
+    lattice_region = Cylinder(ds, r1=30, r2=30, l=height/2) - \
+        Cylinder(ds, r1=22.5, r2=22.5, l=height/2)
 
-    outer_skin = Cylinder(ds, r1=20, r2=20, l=6) - \
-        Cylinder(ds, r1=19.5, r2=19.5, l=6) - outer_removal_band
-
-    inner_skin = Cylinder(ds, r1=15.5, r2=15.5, l=6) - \
-        Cylinder(ds,  r1=15, r2=15, l=6) - inner_removal_band
-
-    lattice_region = Cylinder(ds, r1=20, r2=20, l=6) - \
-        Cylinder(ds, r1=15, r2=15, l=6)
-
-    lat_x = 5
+    lat_x = 7.5
     lat_y = math.pi / 10
-    lat_z = 6
+    lat_z = 10
 
-    for vf in [0.2, 0.3, 0.4, 0.5]:
+    x=0
+    z=1
 
+    for vf in [0.2, 0.3]:
+        
         for lattice in [GyroidNetwork(
-                ds, x=-0.35, z=0.2, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf)]:
+                ds, x=x+1, z=z, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf),
+                DoubleGyroidNetwork(
+                ds, x=x+1, z=z, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf),
+                Gyroid(
+                ds, x=x, z=z, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf),
+                BCC(
+                ds, x=x, z=z, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf),
+                Diamond(
+                ds, x=x, z=z, lx=lat_x, ly=lat_y, lz=lat_z, vf=vf)]:
 
             lattice.convertToCylindrical()
 
             latticed = lattice_region / lattice
 
+            latticed.previewModel(mode='volume')
+
+            raise
+
             latticed.findSurface()
 
             latticed.decimate_mesh(0.2)
 
-            latticed.save_mesh(latticed.name+str(vf))
+            latticed.smooth_mesh(5, 0.33)
+
+            latticed.save_mesh(f'C:\\Users\\Toby Wilkinson\\Added Scientific Ltd\\Design & Comp. Team - General\\CAD Files\\LeoRings\\temp\\{latticed.name+str(vf)}')
