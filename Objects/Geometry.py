@@ -125,7 +125,7 @@ class Geometry:
             print(f'No isosurface found at specified level ({level})')
             raise
 
-    def save_tet_mesh(self, filename):
+    def save_tet_mesh(self, filename=None):
 
         if filename is None:
             self.filename = self.name + '.msh'
@@ -134,7 +134,10 @@ class Geometry:
             if filename[:-4] != '.msh':
                 self.filename = filename + '.msh'
 
-        tetra = Tetrahedralizer(max_its=10)
+        tetra = Tetrahedralizer(max_its=12)
+
+        if self.verts is None:
+            self.findSurface()
 
         tetra.set_mesh(self.verts, self.faces)
 
