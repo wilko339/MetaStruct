@@ -1,11 +1,10 @@
-from Examples.LeosRings import leos_rings
-
-import igl
-
+from P19045 import lattice_slab
 
 def main():
-    leos_rings()
+    lattice_slab.main()
+
 
 
 if __name__ == '__main__':
     main()
+ 
