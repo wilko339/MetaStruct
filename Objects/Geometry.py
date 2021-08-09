@@ -125,7 +125,7 @@ class Geometry:
             print(f'No isosurface found at specified level ({level})')
             raise
 
-    def save_tet_mesh(self, filename=None):
+    def save_tet_mesh(self, filename=None, edge_length_r=1/100, epsilon=1/1500):
 
         if filename is None:
             self.filename = self.name + '.msh'
@@ -134,7 +134,8 @@ class Geometry:
             if filename[:-4] != '.msh':
                 self.filename = filename + '.msh'
 
-        tetra = Tetrahedralizer(max_its=12)
+        tetra = Tetrahedralizer(
+            max_its=50, edge_length_r=edge_length_r, epsilon=epsilon)
 
         if self.verts is None:
             self.findSurface()
@@ -221,6 +222,8 @@ class Geometry:
 
         success, self.verts, self.faces, _, _ = igl.qslim(
             self.verts, self.faces, target)
+
+        assert len(self.faces) > 0, "QSlim failure, input mesh may be too large."
 
         c = igl.orientable_patches(self.faces)
 

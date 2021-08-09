@@ -76,8 +76,13 @@ class DesignSpace:
                                                             Z,
                                                             indexing='ij')
 
-        self.coordinate_list = np.empty(
-            (self.resolution * self.resolution * self.resolution, 3), dtype=np.float32)
+        if self.x_resolution == 0:
+            self.coordinate_list = np.empty(
+                (self.resolution * self.resolution * self.resolution, 3), dtype=np.float32)
+
+        else:
+            self.coordinate_list = np.empty(
+                (self.x_resolution * self.y_resolution * self.z_resolution, 3), dtype=np.float32)
         self.coordinate_list[:, 0] = self.x_grid.flatten()
         self.coordinate_list[:, 1] = self.y_grid.flatten()
         self.coordinate_list[:, 2] = self.z_grid.flatten()
