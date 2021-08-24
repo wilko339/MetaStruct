@@ -5,24 +5,30 @@ from Objects.Shapes.Cuboid import Cuboid
 
 def lattice_slabs():
 
-    skin_thicks = [2.0, 1.5, 1.0]
-    vfs = [0.5, 0.25, 0.1]
+    skin_thicks = [1.0]
+    vfs = [0.1]
 
-    ds = DesignSpace(x_resolution=350, y_resolution=210, z_resolution=70, x_bounds=[0, 50], y_bounds=[
-                     0, 30], z_bounds=[0, 10])
+    x_dim = 50
+    y_dim = 30
+
+    ds = DesignSpace(x_resolution=350*2, y_resolution=210*2, z_resolution=70*2, x_bounds=[0, x_dim*2], y_bounds=[
+                     0, y_dim*2], z_bounds=[0, 10])
 
     for vf_idx, vf in enumerate(vfs):
 
-        volume = Cuboid(ds, x=25, y=15, z=5, xd=24.99, yd=14.99, zd=4.9)
-
-        lattice = Gyroid(ds, x=25, y=15, z=5, lx=5, ly=5, lz=5, vf=vf)
-
-        volume /= lattice
-
         for sk_idx, skin in enumerate(skin_thicks):
 
-            skins = Cuboid(ds, x=25, y=15, z=skin/2, xd=25, yd=15, zd=skin/2) + \
-                Cuboid(ds, x=25, y=15, z=10-(skin/2), xd=25, yd=15, zd=skin/2)
+            volume = Cuboid(ds, x=x_dim, y=y_dim, z=5,
+                            xd=x_dim-0.01, yd=y_dim-0.01, zd=4.9)
+
+            lattice = Gyroid(ds, x=x_dim, y=y_dim, z=5,
+                             lx=5, ly=5, lz=5, vf=vf)
+
+            volume /= lattice
+
+            skins = Cuboid(ds, x=x_dim, y=y_dim, z=skin/2, xd=x_dim, yd=y_dim, zd=skin/2) + \
+                Cuboid(ds, x=x_dim, y=y_dim, z=10-(skin/2),
+                       xd=x_dim, yd=y_dim, zd=skin/2)
 
             volume += skins
 
@@ -30,11 +36,11 @@ def lattice_slabs():
 
             # volume.previewModel()
 
-            volume.decimate_mesh(0.15)
+            volume.decimate_mesh(0.3)
 
-            volume.save_mesh(f'slab_{int(vf*100)}_{skin}_quarter')
+            volume.save_mesh(f'slab_{int(vf*100)}_{skin}')
 
-            volume.save_tet_mesh(filename=f'slab_{int(vf*100)}_{skin}_quarter')
+            volume.save_tet_mesh(filename=f'slab_{int(vf*100)}_{skin}')
 
 
 def lattice_coupons(vf=0.5, skin=1.0):

@@ -31,7 +31,7 @@ class Cube(Cuboid):
 
         scale = dim / (dim + round_r)
 
-        x_abs = ne.evaluate('abs((x-x0)/scale)-dim')
+        x_abs = ne.evaluate('abs((x-x0)/scale)-dim', casting='same_kind')
         y_abs = ne.re_evaluate({'x': y, 'x0': y0, 'scale': scale, 'dim': dim})
         z_abs = ne.re_evaluate({'x': z, 'x0': z0, 'scale': scale, 'dim': dim})
 

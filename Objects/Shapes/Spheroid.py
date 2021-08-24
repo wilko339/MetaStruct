@@ -8,15 +8,15 @@ class Spheroid(Shape):
     def __init__(self, design_space, x=0, y=0, z=0, xr=1, yr=2, zr=1, ):
         super().__init__(design_space, x, y, z)
 
-        self.xr = parameter_check(xr)
-        self.yr = parameter_check(yr)
-        self.zr = parameter_check(zr)
+        self.xr = xr
+        self.yr = yr
+        self.zr = zr
 
-        self.xLims = np.array(
+        self.x_limits = np.array(
             [self.x - self.xr, self.x + self.xr])
-        self.yLims = np.array(
+        self.y_limits = np.array(
             [self.y - self.yr, self.y + self.yr])
-        self.zLims = np.array(
+        self.z_limits = np.array(
             [self.z - self.zr, self.z + self.zr])
 
     def __repr__(self):
