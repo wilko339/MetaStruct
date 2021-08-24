@@ -8,6 +8,7 @@ from stl import mesh as msh
 import igl
 from wildmeshing import Tetrahedralizer
 import skfmm
+from Functions.Remap import remap
 
 import mayavi.mlab as ml
 
@@ -125,7 +126,7 @@ class Geometry:
             print(f'No isosurface found at specified level ({level})')
             raise
 
-    def save_tet_mesh(self, filename=None, edge_length_r=1/100, epsilon=1/1500):
+    def save_tet_mesh(self, filename=None, edge_length_r=1/100, epsilon=1/2000):
 
         if filename is None:
             self.filename = self.name + '.msh'
@@ -307,14 +308,40 @@ class Geometry:
 
     def convertToSpherical(self):
 
-        XX = self.x_grid
-        YY = self.y_grid
-        ZZ = self.z_grid
+        x_grid = self.x_grid
+        y_grid = self.y_grid
+        z_grid = self.z_grid
 
         self.x_grid = ne.evaluate('sqrt(x_grid**2 + y_grid**2 + z_grid**2)')
         self.y_grid = ne.evaluate(
             'arctan2(sqrt(x_grid**2 + y_grid**2),z_grid)')
         self.z_grid = ne.evaluate('arctan2(y_grid,x_grid)')
+
+        self.evaluated_grid = self.evaluate_point(
+            self.x_grid, self.y_grid, self.z_grid)
+
+    def transform_test(self):
+
+        x = remap(self.x_grid, -1, 1)
+        y = remap(self.y_grid, -1, 1)
+        z = remap(self.z_grid, -1, 1)
+        pi = np.pi
+
+        self.x_grid += ne.evaluate('x+z*(x+x**2)')
+        self.y_grid += ne.evaluate('y+z*(y+y**2)')
+
+        self.evaluated_grid = self.evaluate_point(
+            self.x_grid, self.y_grid, self.z_grid)
+
+    def pringle(self, pringle_factor=0.1):
+
+        x = self.x_grid
+        y = self.y_grid
+        z = self.z_grid
+        pi = np.pi
+        fac = pringle_factor
+
+        self.z_grid = ne.evaluate('z + 0.1*(x**2 - y**2)')
 
         self.evaluated_grid = self.evaluate_point(
             self.x_grid, self.y_grid, self.z_grid)
