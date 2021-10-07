@@ -9,6 +9,7 @@ import igl
 from wildmeshing import Tetrahedralizer
 import skfmm
 from Functions.Remap import remap
+from scipy.spatial.transform import Rotation as R
 
 import mayavi.mlab as ml
 
@@ -189,7 +190,7 @@ class Geometry:
                     self.evaluated_grid = np.maximum(
                         self.evaluated_grid, clip_value - self.y_grid)
 
-        #ml.figure(bgcolor=(0, 0, 0))
+        # ml.figure(bgcolor=(0, 0, 0))
 
         if mode == 'volume':
 
@@ -320,15 +321,17 @@ class Geometry:
         self.evaluated_grid = self.evaluate_point(
             self.x_grid, self.y_grid, self.z_grid)
 
-    def transform_test(self):
+    def transform_test(self, fac=10):
 
-        x = remap(self.x_grid, -1, 1)
-        y = remap(self.y_grid, -1, 1)
-        z = remap(self.z_grid, -1, 1)
         pi = np.pi
+        x = remap(self.x_grid)
+        y = remap(self.y_grid)
+        z = remap(self.z_grid)
+        k = fac
 
-        self.x_grid += ne.evaluate('x+z*(x+x**2)')
-        self.y_grid += ne.evaluate('y+z*(y+y**2)')
+        r = R.from_quat([1, -1, 1, 1])
+
+        self.x_grid = r.apply(x)
 
         self.evaluated_grid = self.evaluate_point(
             self.x_grid, self.y_grid, self.z_grid)

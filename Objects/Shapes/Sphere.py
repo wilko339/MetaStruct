@@ -23,4 +23,3 @@ class Sphere(Spheroid):
         r = self.r
 
         return ne.evaluate('sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2) -r')
-
