@@ -1,6 +1,6 @@
-from MetaStruct.Objects import Lattice
-
 import numexpr as ne
+
+from MetaStruct.Objects import Lattice
 
 
 class DiamondSurface(Lattice):

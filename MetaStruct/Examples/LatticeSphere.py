@@ -1,6 +1,5 @@
-from MetaStruct.Objects import Union
+from MetaStruct.Objects import Union, Gyroid
 from MetaStruct.Objects.DesignSpace import DesignSpace
-from MetaStruct.Objects import Gyroid
 from MetaStruct.Objects.Shapes.HollowSphere import HollowSphere
 
 

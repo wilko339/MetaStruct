@@ -1,7 +1,7 @@
-from MetaStruct.Objects.Shapes.Shape import Shape
-
 import numexpr as ne
 import numpy as np
+
+from MetaStruct.Objects.Shapes.Shape import Shape
 
 
 class Cylinder(Shape):

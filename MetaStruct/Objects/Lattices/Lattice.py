@@ -2,10 +2,7 @@ import math
 
 import numpy as np
 
-from MetaStruct.Objects.Booleans.Boolean import Difference
-from MetaStruct.Objects.Booleans.Boolean import Intersection
-from MetaStruct.Objects.Booleans.Boolean import Union
-from MetaStruct.Objects.Booleans.Boolean import Geometry
+from MetaStruct.Objects.Booleans.Boolean import Difference, Intersection, Union, Geometry
 
 
 # TODO: Compress lattice types into one class? Use dict of functions?

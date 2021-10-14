@@ -1,7 +1,7 @@
-from MetaStruct.Objects.Geometry import Geometry
-
-import numpy as np
 import numexpr as ne
+import numpy as np
+
+from MetaStruct.Objects.Geometry import Geometry
 
 
 class Noise(Geometry):

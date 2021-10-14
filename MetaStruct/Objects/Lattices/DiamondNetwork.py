@@ -1,7 +1,7 @@
-from MetaStruct.Objects.Lattices.Lattice import Lattice
-from MetaStruct.Objects.Lattices.DiamondSurface import DiamondSurface
-
 import numexpr as ne
+
+from MetaStruct.Objects.Lattices.DiamondSurface import DiamondSurface
+from MetaStruct.Objects.Lattices.Lattice import Lattice
 
 
 class DiamondNetwork(Lattice):

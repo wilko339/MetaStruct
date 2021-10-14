@@ -1,5 +1,6 @@
-from MetaStruct.Objects.Shapes.Shape import Shape
 import copy
+
+from MetaStruct.Objects.Shapes.Shape import Shape
 
 
 class Pattern(Shape):

@@ -1,8 +1,8 @@
-import trimesh
 import mesh_to_sdf
+import trimesh
+
+from MetaStruct.Objects import Gyroid, Shape
 from MetaStruct.Objects.DesignSpace import DesignSpace
-from MetaStruct.Objects import Gyroid
-from MetaStruct.Objects import Shape
 
 
 def lattice_bracket():

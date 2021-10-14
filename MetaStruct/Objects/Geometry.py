@@ -1,14 +1,14 @@
-
+import igl
+import mayavi.mlab as ml
 import numexpr as ne
 import numpy as np
-from skimage import measure
-import igl
-from wildmeshing import Tetrahedralizer
 import skfmm
-from MetaStruct.Functions.Remap import remap
 from scipy.spatial.transform import Rotation as R
+from skimage import measure
+from wildmeshing import Tetrahedralizer
+import os
 
-import mayavi.mlab as ml
+from MetaStruct.Functions.Remap import remap
 
 
 class Geometry:
@@ -74,7 +74,7 @@ class Geometry:
 
         pass
 
-    def evaluateDistance(self):
+    def evaluate_distance(self):
 
         if self.evaluated_grid is None:
             self.evaluate_grid()
@@ -105,7 +105,7 @@ class Geometry:
             self.gradient_grid = np.gradient(
                 self.evaluated_grid, self.design_space.resolution)
 
-    def findSurface(self, level=0):
+    def find_surface(self, level=0):
 
         print(f'Extracting Isosurface (level = {level})...')
 
@@ -124,7 +124,7 @@ class Geometry:
             print(f'No isosurface found at specified level ({level})')
             raise
 
-    def save_tet_mesh(self, filename=None, edge_length_r=1/100, epsilon=1/2000):
+    def save_tet_mesh(self, filename=None, edge_length_r=1 / 100, epsilon=1 / 2000):
 
         if filename is None:
             self.filename = self.name + '.msh'
@@ -137,7 +137,7 @@ class Geometry:
             max_its=50, edge_length_r=edge_length_r, epsilon=epsilon)
 
         if self.verts is None:
-            self.findSurface()
+            self.find_surface()
 
         tetra.set_mesh(self.verts, self.faces)
 
@@ -145,7 +145,7 @@ class Geometry:
 
         tetra.save(self.filename)
 
-    def previewModel(self, clip=None, clip_value=0, flip_clip=False, mode='surface', level=0, rgb=(22, 94, 111)):
+    def preview_model(self, clip=None, clip_value=0, flip_clip=False, mode='surface', level=0, rgb=(22, 94, 111)):
 
         assert mode in [
             'volume', 'surface'], 'Invalid mode selected, use either "volume" or "surface".'
@@ -155,42 +155,41 @@ class Geometry:
         if self.evaluated_grid is None:
             self.evaluate_grid()
 
-        if clip != None:
+        if clip is not None:
 
             if clip == 'x':
 
-                if flip_clip == False:
+                if not flip_clip:
                     self.evaluated_grid = np.maximum(
                         self.evaluated_grid, self.x_grid - clip_value)
 
-                if flip_clip == True:
+                if flip_clip:
                     self.evaluated_grid = np.maximum(
                         self.evaluated_grid, clip_value - self.x_grid)
 
             if clip == 'y':
 
-                if flip_clip == False:
+                if not flip_clip:
                     self.evaluated_grid = np.maximum(
                         self.evaluated_grid, self.z_grid - clip_value)
 
-                if flip_clip == True:
+                if flip_clip:
                     self.evaluated_grid = np.maximum(
                         self.evaluated_grid, clip_value - self.z_grid)
 
             if clip == 'z':
 
-                if flip_clip == False:
+                if not flip_clip:
                     self.evaluated_grid = np.maximum(
                         self.evaluated_grid, self.y_grid - clip_value)
 
-                if flip_clip == True:
+                if flip_clip:
                     self.evaluated_grid = np.maximum(
                         self.evaluated_grid, clip_value - self.y_grid)
 
         # ml.figure(bgcolor=(0, 0, 0))
 
         if mode == 'volume':
-
             scalar_field = ml.pipeline.scalar_field(
                 self.evaluated_grid)
 
@@ -201,11 +200,10 @@ class Geometry:
         if mode == 'surface':
 
             if self.verts is None or self.faces is None:
-
-                self.findSurface(level=level)
+                self.find_surface(level=level)
 
             ml.triangular_mesh(
-                self.verts[:, 0], self.verts[:, 1], self.verts[:, 2], self.faces, color=tuple(c/255 for c in rgb))
+                self.verts[:, 0], self.verts[:, 1], self.verts[:, 2], self.faces, color=tuple(c / 255 for c in rgb))
 
         ml.show()
 
@@ -213,9 +211,9 @@ class Geometry:
         if self.verts is None or self.faces is None:
             raise ValueError('No mesh, please use find_surface()')
 
-        assert (factor < 1 and factor > 0), 'Factor must be between 0 and 1'
+        assert (1 > factor > 0), 'Factor must be between 0 and 1'
 
-        target = round(len(self.faces)*factor)
+        target = round(len(self.faces) * factor)
 
         print('Decimating mesh...')
 
@@ -248,8 +246,8 @@ class Geometry:
 
         print('Smoothing mesh...')
 
-        for iter in range(iterations):
-            print(f'Iteration {iter}...')
+        for iteration in range(iterations):
+            print(f'Iteration {iteration}...')
             self.subdivide_mesh()
             self.decimate_mesh(factor)
         print('Finished smoothing')
@@ -272,9 +270,8 @@ class Geometry:
             self.filename = filename + formats[file_format]
 
         if self.faces is None or self.verts is None:
-
             print('Executing Marching Cubes Algorithm...')
-            self.findSurface()
+            self.find_surface()
 
         print('Saving Mesh...')
 
@@ -289,7 +286,7 @@ class Geometry:
 
         print(f'"{self.filename}" successfully exported.')
 
-    def convertToCylindrical(self):
+    def convert_to_cylindrical(self):
 
         x_grid = self.x_grid
         y_grid = self.y_grid
@@ -304,7 +301,7 @@ class Geometry:
         self.evaluated_grid = self.evaluate_point(
             self.x_grid, self.y_grid, self.z_grid)
 
-    def convertToSpherical(self):
+    def convert_to_spherical(self):
 
         x_grid = self.x_grid
         y_grid = self.y_grid

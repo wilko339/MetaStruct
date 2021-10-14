@@ -1,9 +1,10 @@
+import math
+
+import numpy as np
+
+from MetaStruct.Objects import Gyroid, Sphere
 from MetaStruct.Objects.DesignSpace import DesignSpace
 from MetaStruct.Objects.Shapes.Cuboid import Cuboid
-from MetaStruct.Objects import Gyroid
-import math
-from MetaStruct.Objects import Sphere
-import numpy as np
 
 
 def latticeRefinementExample():
@@ -14,7 +15,7 @@ def latticeRefinementExample():
 
     refinedLattice = Gyroid(ds, 1, ny=math.pi/3, nz=2, vf=0.4)
 
-    refinedLattice.convertToCylindrical()
+    refinedLattice.convert_to_cylindrical()
 
     sphere = Sphere(ds, r=1.5)
 

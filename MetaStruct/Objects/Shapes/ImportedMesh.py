@@ -1,11 +1,12 @@
-from MetaStruct.Objects.Shapes.Shape import Shape
-import numpy as np
-import igl
 import cProfile
-import pstats
 import io
-
+import pstats
 from pathlib import Path
+
+import igl
+import numpy as np
+
+from MetaStruct.Objects.Shapes.Shape import Shape
 
 MESHES_FOLDER_NAME = 'meshes'
 SAVED_MESHES_FOLDER = Path(

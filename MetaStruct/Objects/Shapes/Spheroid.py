@@ -1,6 +1,7 @@
-from MetaStruct.Objects.Shapes.Shape import Shape
-import numpy as np
 import numexpr as ne
+import numpy as np
+
+from MetaStruct.Objects.Shapes.Shape import Shape
 
 
 class Spheroid(Shape):

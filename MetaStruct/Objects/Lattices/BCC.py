@@ -1,6 +1,6 @@
-from MetaStruct.Objects.Lattices.Lattice import Lattice
-
 import numexpr as ne
+
+from MetaStruct.Objects.Lattices.Lattice import Lattice
 
 
 class BCC(Lattice):

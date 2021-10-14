@@ -1,13 +1,9 @@
-from MetaStruct.Objects.DesignSpace import DesignSpace
-from MetaStruct.Objects import Cylinder
 import math
-from MetaStruct.Objects import GyroidNetwork
-from MetaStruct.Objects import Gyroid
-from MetaStruct.Objects import DoubleGyroidNetwork
-from MetaStruct.Objects import BCC
+
+from MetaStruct.Objects import Cylinder, GyroidNetwork, Gyroid, DoubleGyroidNetwork, BCC, Cube
+from MetaStruct.Objects.DesignSpace import DesignSpace
 from MetaStruct.Objects.Lattices.Diamond import Diamond
 from MetaStruct.Objects.Lattices.Primitive import Primitive
-from MetaStruct.Objects import Cube
 
 
 def lattice_rings():
@@ -50,7 +46,7 @@ def lattice_rings():
 
                         if cartesian is False:
 
-                            lattice.convertToCylindrical()
+                            lattice.convert_to_cylindrical()
 
                         latticed = lattice_region / lattice
 
@@ -70,7 +66,7 @@ def lattice_rings():
 
                         # latticed.previewModel()
 
-                        latticed.findSurface()
+                        latticed.find_surface()
 
                         latticed.decimate_mesh(0.1)
 
@@ -104,7 +100,7 @@ def samples():
 
             sample = volume / lattice
 
-            sample.findSurface()
+            sample.find_surface()
 
             sample.decimate_mesh(0.5)
 
@@ -137,7 +133,7 @@ def polar_v_cartesian():
 
             latticed = lattice_region / lattice
 
-            latticed.findSurface()
+            latticed.find_surface()
 
             latticed.decimate_mesh(0.2)
 

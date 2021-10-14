@@ -1,7 +1,7 @@
-from MetaStruct.Objects.Shapes.Shape import Shape
-from MetaStruct.Objects.Shapes.Cube import Cube
-
 import numpy as np
+
+from MetaStruct.Objects.Shapes.Cube import Cube
+from MetaStruct.Objects.Shapes.Shape import Shape
 
 
 class HollowCube(Shape):

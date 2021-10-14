@@ -1,7 +1,7 @@
-from MetaStruct.Objects.Geometry import Geometry
-
 import numexpr as ne
 import perlin3d
+
+from MetaStruct.Objects.Geometry import Geometry
 
 
 class PerlinNoise(Geometry):

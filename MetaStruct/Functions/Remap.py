@@ -1,5 +1,5 @@
-import numpy as np
 import numexpr as ne
+import numpy as np
 
 
 def remap(grid, lo=0, hi=1):

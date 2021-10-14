@@ -1,6 +1,9 @@
-from MetaStruct.Objects.Lattices.Lattice import Lattice
-import numexpr as ne
 import math
+
+import numexpr as ne
+
+from MetaStruct.Objects.Lattices.Lattice import Lattice
+
 
 class SquareLattice(Lattice):
 

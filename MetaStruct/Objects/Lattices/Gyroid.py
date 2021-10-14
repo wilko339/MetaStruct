@@ -1,7 +1,7 @@
-from MetaStruct.Objects.Lattices.Lattice import Lattice
-from MetaStruct.Objects.Lattices.GyroidSurface import GyroidSurface
-
 import numexpr as ne
+
+from MetaStruct.Objects.Lattices.GyroidSurface import GyroidSurface
+from MetaStruct.Objects.Lattices.Lattice import Lattice
 
 
 class Gyroid(Lattice):

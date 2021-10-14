@@ -1,6 +1,6 @@
-from MetaStruct.Objects.Shapes.Cylinder import Cylinder
 from MetaStruct.Objects.DesignSpace import DesignSpace
 from MetaStruct.Objects.Lattices.Primitive import Primitive
+from MetaStruct.Objects.Shapes.Cylinder import Cylinder
 
 
 def main():

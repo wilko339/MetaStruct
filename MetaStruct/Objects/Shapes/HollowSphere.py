@@ -1,6 +1,7 @@
+import numpy as np
+
 from MetaStruct.Objects.Shapes.Shape import Shape
 from MetaStruct.Objects.Shapes.Sphere import Sphere
-import numpy as np
 
 
 class HollowSphere(Shape):

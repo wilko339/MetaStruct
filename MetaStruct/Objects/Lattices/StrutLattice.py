@@ -4,11 +4,11 @@ import pstats
 
 import numexpr as ne
 import numpy as np
+import progressbar
+import pyvoro
 from hilbertcurve.hilbertcurve import HilbertCurve
 from scipy.spatial import Delaunay, ConvexHull
 from sklearn.neighbors import NearestNeighbors
-import pyvoro
-import progressbar
 
 from MetaStruct.Objects.Shapes.Cube import Cube
 from MetaStruct.Objects.Shapes.Line import Line
