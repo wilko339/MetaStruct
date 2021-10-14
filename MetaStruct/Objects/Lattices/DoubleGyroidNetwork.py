@@ -1,6 +1,6 @@
 import numexpr as ne
-from MetaStruct.Objects import GyroidSurface
-from MetaStruct.Objects import Lattice
+from MetaStruct.Objects.Lattices.GyroidSurface import GyroidSurface
+from MetaStruct.Objects.Lattices.Lattice import Lattice
 
 
 class DoubleGyroidNetwork(Lattice):

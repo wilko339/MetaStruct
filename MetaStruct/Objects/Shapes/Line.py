@@ -2,8 +2,8 @@ import numexpr as ne
 import numpy as np
 from numpy.linalg import norm
 
-from MetaStruct.Objects import Vector
-from MetaStruct.Objects import Shape
+from MetaStruct.Objects.Misc.Vector import Vector
+from MetaStruct.Objects.Shapes.Shape import Shape
 
 
 class Line(Shape):

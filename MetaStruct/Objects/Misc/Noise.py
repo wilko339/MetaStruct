@@ -1,4 +1,4 @@
-from MetaStruct.Objects import Geometry
+from MetaStruct.Objects.Geometry import Geometry
 
 import numpy as np
 import numexpr as ne

@@ -1,4 +1,4 @@
-from MetaStruct.Objects import Shape
+from MetaStruct.Objects.Shapes.Shape import Shape
 
 import numpy as np
 import numexpr as ne

@@ -1,5 +1,5 @@
-from MetaStruct.Objects import Shape
-from MetaStruct.Objects import Cube
+from MetaStruct.Objects.Shapes.Shape import Shape
+from MetaStruct.Objects.Shapes.Cube import Cube
 
 import numpy as np
 

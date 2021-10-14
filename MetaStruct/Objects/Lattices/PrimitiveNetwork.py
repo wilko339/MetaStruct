@@ -1,4 +1,4 @@
-from MetaStruct.Objects import Lattice
+from MetaStruct.Objects.Lattices.Lattice import Lattice
 from MetaStruct.Objects.Lattices.PrimitiveSurface import PrimitiveSurface
 
 

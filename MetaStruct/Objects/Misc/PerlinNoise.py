@@ -1,4 +1,4 @@
-from MetaStruct.Objects import Geometry
+from MetaStruct.Objects.Geometry import Geometry
 
 import numexpr as ne
 import perlin3d

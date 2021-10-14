@@ -1,5 +1,5 @@
-from MetaStruct.Objects import Lattice
-from MetaStruct.Objects import DiamondSurface
+from MetaStruct.Objects.Lattices.Lattice import Lattice
+from MetaStruct.Objects.Lattices.DiamondSurface import DiamondSurface
 
 import numexpr as ne
 

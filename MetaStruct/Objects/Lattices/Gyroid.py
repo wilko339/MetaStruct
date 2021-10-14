@@ -1,5 +1,5 @@
-from MetaStruct.Objects import Lattice
-from MetaStruct.Objects import GyroidSurface
+from MetaStruct.Objects.Lattices.Lattice import Lattice
+from MetaStruct.Objects.Lattices.GyroidSurface import GyroidSurface
 
 import numexpr as ne
 

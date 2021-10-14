@@ -1,6 +1,6 @@
 import numexpr as ne
 
-from MetaStruct.Objects import Spheroid
+from MetaStruct.Objects.Shapes.Spheroid import Spheroid
 
 
 class Sphere(Spheroid):
