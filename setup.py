@@ -9,6 +9,6 @@ setup(
     url='https://github.com/wilko339/MetaStruct.git',
     packages=find_packages(exclude=('test*', 'testing*')),
     entry_points={
-        'console_scripts': ['MetStruct-cli = ']
+        'console_scripts': ['MetaStruct-cli = MetaStruct.main:main']
     }
 )
