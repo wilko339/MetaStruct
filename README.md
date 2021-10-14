@@ -1,19 +1,23 @@
-# ImplicitCAD
-Python project dedicated to creating an open-source CAD designer using implicit equations.
+# MetaStruct
+
+Python project for creating an open-source CAD designer using implicit equations. 
+
+# License
+
+This project is licensed under the MIT license. 
 
 # Required External Packages
 
 1. NumPy - Certain array functions, setting up the Design Space
-2. NumExpr - Implicit function evaluations
+2. NumExpr - Does the heavy lifting, implicit function evaluations
 3. Mayavi - Previewing models
 4. Scikit-image - Marching Cubes
 5. libigl - Exporting and cleaning meshes, importing meshes to an SDF
 6. perlin3d - For Perlin noise (clone from GitHub Repository)
 
-
 # Architecture
 
-ImplicitCAD defines all shapes and operations as objects, each with specific attributes and methods. All objects inherit from the "Geometry" class, which is where the "previewModel()" and "save_mesh()" methods (among others) are located.
+MetaStruct uses object-oriented programming and defines all shapes and operations as objects, each with certain attributes and methods. All objects inherit from the "Geometry" class, which is where the "previewModel()" and "save_mesh()" methods (among others) are located. Everything requires a "DesignSpace" object, containing the arrays of X, Y and Z coordinates to evaluate the functions at. Marching cubes is then used to extract a trianglar mesh from the distance field which can be previewed or cleaned with libigl and exported.
 
 # Workflow
 
@@ -92,3 +96,13 @@ There are also some mathematical operators if required:
 2. Subtract
 3. Multiply
 4. Divide
+
+# About the Project
+
+This project started out as an exercise in learning what implicit geometry is and how you can use it to make 3D objects. Development began in March 2020 and is ongoing. 
+
+Credit goes to Added Scientific Ltd (addedscientific.com) for providing resources for the kick-off and early development of the project and for allowing the public release of this code for ongoing development.
+
+# Author
+
+Toby Wilkinson was a computational research engineer at Added Scientific between January 2020 and November 2021. 
