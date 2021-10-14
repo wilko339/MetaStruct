@@ -10,9 +10,9 @@ from sklearn.neighbors import NearestNeighbors
 import pyvoro
 import progressbar
 
-from MetaStruct.Objects import Cube
+from MetaStruct.Objects.Shapes.Cube import Cube
 from MetaStruct.Objects.Shapes.Line import Line
-from MetaStruct.Objects import Shape
+from MetaStruct.Objects.Shapes.Shape import Shape
 
 
 def profile(func):
