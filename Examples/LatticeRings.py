@@ -10,7 +10,7 @@ from Objects.Lattices.Primitive import Primitive
 from Objects.Shapes.Cube import Cube
 
 
-def leos_rings():
+def lattice_rings():
 
     height = 11
     rim = 0.5
@@ -87,8 +87,7 @@ def leos_rings():
 
                         name += "071021"
 
-                        latticed.save_mesh(
-                            f'C:\\Users\\Toby\\Added Scientific Ltd\\AISIN - General\\{name}')
+                        latticed.save_mesh(f'{name}')
 
 
 def samples():
