@@ -8,8 +8,13 @@ from MetaStruct.Objects.Shapes.Shape import Shape
 
 class Line(Shape):
 
-    def __init__(self, design_space, p1=[0, 0, 0], p2=[1, 1, 1], r=0.015):
+    def __init__(self, design_space, p1=None, p2=None, r=0.015):
         super().__init__(design_space, p1[0], p1[1], p1[2])
+
+        if p1 is None:
+            p1 = [0, 0, 0]
+        if p2 is None:
+            p2 = [1, 1, 1]
 
         self.p1 = Vector(p1)
         self.p2 = Vector(p2)

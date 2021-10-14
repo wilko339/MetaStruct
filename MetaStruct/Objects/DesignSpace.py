@@ -1,18 +1,25 @@
 import numpy as np
-import numexpr as ne
 
 
 class DesignSpace:
     DATA_TYPE = np.float32
 
     def __init__(self,
-                 resolution=200,
+                 resolution=None,
                  x_resolution=0,
                  y_resolution=0,
                  z_resolution=0,
-                 x_bounds=[-1.1, 1.1],
-                 y_bounds=[-1.1, 1.1],
-                 z_bounds=[-1.1, 1.1]):
+                 x_bounds=None,
+                 y_bounds=None,
+                 z_bounds=None):
+        if resolution is None:
+            resolution=200
+        if x_bounds is None:
+            x_bounds = [-1.1, 1.1]
+        if y_bounds is None:
+            y_bounds = [-1.1, 1.1]
+        if z_bounds is None:
+            z_bounds = [-1.1, 1.1]
 
         self.x_bounds = x_bounds
         self.y_bounds = y_bounds

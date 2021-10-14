@@ -267,8 +267,10 @@ class VoronoiLattice(StrutLattice):
 
 class RegularStrutLattice(StrutLattice):
 
-    def __init__(self, design_space, n_cells=[1, 1, 1], shape=None, r=0.05):
+    def __init__(self, design_space, n_cells=None, shape=None, r=0.05):
         super().__init__(design_space, r)
+        if n_cells is None:
+            n_cells = [1, 1, 1]
         self.shape = shape
         self.origin = np.array((min(self.shape.x_limits), min(self.shape.y_limits), min(self.shape.z_limits)))
         self.n_cells = n_cells
