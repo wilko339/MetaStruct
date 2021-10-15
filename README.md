@@ -6,14 +6,11 @@ Python project for creating an open-source CAD designer using implicit equations
 
 This project is licensed under the MIT license. 
 
-# Required External Packages
+# Installation
 
-1. NumPy - Certain array functions, setting up the Design Space
-2. NumExpr - Does the heavy lifting, implicit function evaluations
-3. Mayavi - Previewing models
-4. Scikit-image - Marching Cubes
-5. libigl - Exporting and cleaning meshes, importing meshes to an SDF
-6. perlin3d - For Perlin noise (clone from GitHub Repository)
+Clone the code using Github's cloning feature. Navigate into the root directory and pip install locally using:
+    
+    pip install -e .
 
 # Architecture
 
