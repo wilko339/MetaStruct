@@ -2,4 +2,3 @@ include *.py
 include *.txt
 recursive-include MetaStruct *.STL
 recursive-include MetaStruct *.stl
-recursive-include Objects *.pyc
