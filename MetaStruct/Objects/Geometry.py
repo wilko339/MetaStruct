@@ -6,7 +6,6 @@ import skfmm
 from scipy.spatial.transform import Rotation as R
 from skimage import measure
 from wildmeshing import Tetrahedralizer
-import os
 
 from MetaStruct.Functions.Remap import remap
 
@@ -24,7 +23,7 @@ class Geometry:
         self.y = 0
         self.z = 0
 
-        self.verts = self.faces = None
+        self.vertices = self.faces = None
 
         self.x_grid = self.design_space.x_grid
         self.y_grid = self.design_space.y_grid
@@ -114,11 +113,11 @@ class Geometry:
 
         try:
 
-            self.verts, self.faces, self.normals, self.values = measure.marching_cubes(self.evaluated_grid, level=level,
-                                                                                       spacing=(
+            self.vertices, self.faces, self.normals, self.values = measure.marching_cubes(self.evaluated_grid, level=level,
+                                                                                          spacing=(
                                                                                            self.x_step, self.y_step,
                                                                                            self.z_step),
-                                                                                       allow_degenerate=False)
+                                                                                          allow_degenerate=False)
 
         except ValueError:
             print(f'No isosurface found at specified level ({level})')
@@ -136,10 +135,10 @@ class Geometry:
         tetra = Tetrahedralizer(
             max_its=50, edge_length_r=edge_length_r, epsilon=epsilon)
 
-        if self.verts is None:
+        if self.vertices is None:
             self.find_surface()
 
-        tetra.set_mesh(self.verts, self.faces)
+        tetra.set_mesh(self.vertices, self.faces)
 
         tetra.tetrahedralize()
 
@@ -199,16 +198,16 @@ class Geometry:
 
         if mode == 'surface':
 
-            if self.verts is None or self.faces is None:
+            if self.vertices is None or self.faces is None:
                 self.find_surface(level=level)
 
             ml.triangular_mesh(
-                self.verts[:, 0], self.verts[:, 1], self.verts[:, 2], self.faces, color=tuple(c / 255 for c in rgb))
+                self.vertices[:, 0], self.vertices[:, 1], self.vertices[:, 2], self.faces, color=tuple(c / 255 for c in rgb))
 
         ml.show()
 
     def decimate_mesh(self, factor=0.8):
-        if self.verts is None or self.faces is None:
+        if self.vertices is None or self.faces is None:
             raise ValueError('No mesh, please use find_surface()')
 
         assert (1 > factor > 0), 'Factor must be between 0 and 1'
@@ -217,14 +216,14 @@ class Geometry:
 
         print('Decimating mesh...')
 
-        success, self.verts, self.faces, _, _ = igl.qslim(
-            self.verts, self.faces, target)
+        success, self.vertices, self.faces, _, _ = igl.qslim(
+            self.vertices, self.faces, target)
 
         assert len(self.faces) > 0, "QSlim failure, input mesh may be too large."
 
         c = igl.orientable_patches(self.faces)
 
-        self.faces, I = igl.orient_outward(self.verts, self.faces, c[0])
+        self.faces, I = igl.orient_outward(self.vertices, self.faces, c[0])
 
         if success:
             print('Mesh decimated')
@@ -232,16 +231,16 @@ class Geometry:
             print('Decimation did not reach target factor')
 
     def subdivide_mesh(self, divs=1):
-        if self.verts is None or self.faces is None:
+        if self.vertices is None or self.faces is None:
             raise ValueError('No mesh, please use find_surface()')
 
         print('Subdividing mesh...')
 
-        self.verts, self.faces = igl.loop(self.verts, self.faces, divs)
+        self.vertices, self.faces = igl.loop(self.vertices, self.faces, divs)
 
     def smooth_mesh(self, iterations=3, factor=0.25):
 
-        if self.verts is None or self.faces is None:
+        if self.vertices is None or self.faces is None:
             raise ValueError('No mesh, please use find_surface()')
 
         print('Smoothing mesh...')
@@ -269,13 +268,13 @@ class Geometry:
         if filename is not None:
             self.filename = filename + formats[file_format]
 
-        if self.faces is None or self.verts is None:
+        if self.faces is None or self.vertices is None:
             print('Executing Marching Cubes Algorithm...')
             self.find_surface()
 
         print('Saving Mesh...')
 
-        igl.write_triangle_mesh(self.filename, self.verts, self.faces)
+        igl.write_triangle_mesh(self.filename, self.vertices, self.faces)
 
         try:
             f = open(self.filename)
