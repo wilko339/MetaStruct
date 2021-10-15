@@ -7,7 +7,7 @@ def main():
     # Execute code here
     ds = DesignSpace()
     shape = Cylinder(ds) / Primitive(ds)
-    shape.previewModel()
+    shape.preview_model()
 
 
 if __name__ == '__main__':
