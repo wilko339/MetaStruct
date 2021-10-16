@@ -20,9 +20,9 @@ class Line(Shape):
         self.p2 = Vector(p2)
         self.r = r
 
-        self.xLims = np.array(([min(p1[0], p2[0])-r, max(p1[0], p2[0])+r]), dtype=self.designSpace.DATA_TYPE)
-        self.yLims = np.array(([min(p1[1], p2[1])-r, max(p1[1], p2[1])+r]), dtype=self.designSpace.DATA_TYPE)
-        self.zLims = np.array(([min(p1[2], p2[2])-r, max(p1[2], p2[2])+r]), dtype=self.designSpace.DATA_TYPE)
+        self.xLims = np.array(([min(p1[0], p2[0])-r, max(p1[0], p2[0])+r]), dtype=self.design_space.DATA_TYPE)
+        self.yLims = np.array(([min(p1[1], p2[1])-r, max(p1[1], p2[1])+r]), dtype=self.design_space.DATA_TYPE)
+        self.zLims = np.array(([min(p1[2], p2[2])-r, max(p1[2], p2[2])+r]), dtype=self.design_space.DATA_TYPE)
 
     def clamp(self, num, a, b):
 

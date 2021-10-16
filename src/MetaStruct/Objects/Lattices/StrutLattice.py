@@ -6,11 +6,9 @@ import numexpr as ne
 import numpy as np
 import progressbar
 import pyvoro
-from hilbertcurve.hilbertcurve import HilbertCurve
 from scipy.spatial import Delaunay, ConvexHull
 from sklearn.neighbors import NearestNeighbors
 
-from MetaStruct.Objects.Shapes.Cube import Cube
 from MetaStruct.Objects.Shapes.Line import Line
 from MetaStruct.Objects.Shapes.Shape import Shape
 
@@ -45,13 +43,13 @@ class StrutLattice(Shape):
             self.point_cloud = point_cloud
             self.points = self.point_cloud.points
 
-    def generateLattice(self):
+    def generate_lattice(self):
 
         self.n_lines = len(self.lines)
 
         try:
 
-            initial_line = Line(self.designSpace, self.lines[0][0], self.lines[0][1], r=self.r)
+            initial_line = Line(self.design_space, self.lines[0][0], self.lines[0][1], r=self.r)
 
         except IndexError:
 
@@ -76,13 +74,13 @@ class StrutLattice(Shape):
                                       widgets=widgets).start()
 
         for i in range(1, len(self.lines)):
-            self.evaluated_grid = next(self.newGrid(self.lines[i]))
+            self.evaluated_grid = next(self.new_grid(self.lines[i]))
             bar.update(i)
         bar.finish()
 
-    def newGrid(self, line):
+    def new_grid(self, line):
 
-        line = Line(self.designSpace, line[0], line[1], r=self.r)
+        line = Line(self.design_space, line[0], line[1], r=self.r)
 
         line.evaluate_grid(verbose=False)
 
@@ -108,9 +106,9 @@ class RandomLattice(StrutLattice):
         self.num_neighbours = num_neighbours
         self.radius = radius
 
-        self.xLims = [min(self.points[:, 0]), max(self.points[:, 0])]
-        self.yLims = [min(self.points[:, 1]), max(self.points[:, 1])]
-        self.zLims = [min(self.points[:, 2]), max(self.points[:, 2])]
+        self.x_limits = [min(self.points[:, 0]), max(self.points[:, 0])]
+        self.y_limits = [min(self.points[:, 1]), max(self.points[:, 1])]
+        self.z_limits = [min(self.points[:, 2]), max(self.points[:, 2])]
 
         if self.num_neighbours is not None:
 
@@ -151,30 +149,7 @@ class RandomLattice(StrutLattice):
                 if (p1 != p2).any():
                     self.lines.append([p1, p2])
 
-        self.generateLattice()
-
-
-class Hilbert(StrutLattice):
-
-    def __init__(self, design_space, cube: Cube, n_dims: int = 3, iterations: int = 2, r: float = 0.02):
-        super().__init__(design_space, r)
-        self.n_dims = n_dims
-        self.iterations = iterations
-        self.xLims = cube.xLims
-        self.yLims = cube.yLims
-        self.zLims = cube.zLims
-
-        self.hilbert_curve = HilbertCurve(self.iterations, self.n_dims)
-        distances = np.array(range(2 ** (self.iterations * self.n_dims)))
-
-        points = np.array(self.hilbert_curve.points_from_distances(distances)) / (2 ** (self.iterations))
-
-        for i in range(len(points)):
-
-            if i < len(points) - 1:
-                self.lines.append([points[i], points[i + 1]])
-
-        self.generateLattice()
+        self.generate_lattice()
 
 
 class DelaunayLattice(StrutLattice):
@@ -200,7 +175,7 @@ class DelaunayLattice(StrutLattice):
             self.lines.append(line3)
             self.lines.append(line4)
 
-        self.generateLattice()
+        self.generate_lattice()
 
 
 class ConvexHullLattice(StrutLattice):
@@ -228,7 +203,7 @@ class ConvexHullLattice(StrutLattice):
 
         # TODO: Remove duplicate lines from self.lines
 
-        self.generateLattice()
+        self.generate_lattice()
 
 
 class VoronoiLattice(StrutLattice):
@@ -238,31 +213,33 @@ class VoronoiLattice(StrutLattice):
 
         # self.voronoi = Voronoi(self.point_cloud.points, qhull_options='Qbb Qc Qx')
 
-        self.xLims = self.point_cloud.shape.x_limits
-        self.yLims = self.point_cloud.shape.y_limits
-        self.zLims = self.point_cloud.shape.z_limits
+        self.x_limits = self.point_cloud.shape.x_limits
+        self.y_limits = self.point_cloud.shape.y_limits
+        self.z_limits = self.point_cloud.shape.z_limits
 
-        self.voronoi = pyvoro.compute_voronoi(points=point_cloud.points, limits=[self.xLims, self.yLims, self.zLims], dispersion=2)
+        self.voronoi = pyvoro.compute_voronoi(points=point_cloud.points, limits=[self.x_limits, self.y_limits,
+                                                                                 self.z_limits], dispersion=2)
 
         cells = []
 
         for cell in self.voronoi:
-            cell_verts = cell['vertices']
+            cell_vertices = cell['vertices']
             faces = cell['faces']
 
             for face in faces:
-                verts = face['vertices']
-                for i in range(len(verts)):
-                    if i < len(verts)-1:
-                        self.lines.append(tuple([tuple(cell_verts[verts[i]]), tuple(cell_verts[verts[i+1]])]))
+                vertices = face['vertices']
+                for i in range(len(vertices)):
+                    if i < len(vertices) - 1:
+                        self.lines.append(
+                            tuple([tuple(cell_vertices[vertices[i]]), tuple(cell_vertices[vertices[i + 1]])]))
                     else:
-                        self.lines.append(tuple([tuple(cell_verts[verts[i]]), tuple(cell_verts[verts[0]])]))
+                        self.lines.append(tuple([tuple(cell_vertices[vertices[i]]), tuple(cell_vertices[vertices[0]])]))
 
-        #TODO Remove duplicated lines from self.lines
+        # TODO Remove duplicated lines from self.lines
 
         self.lines = list(set(self.lines))
 
-        self.generateLattice()
+        self.generate_lattice()
 
 
 class RegularStrutLattice(StrutLattice):
@@ -275,9 +252,9 @@ class RegularStrutLattice(StrutLattice):
         self.origin = np.array((min(self.shape.x_limits), min(self.shape.y_limits), min(self.shape.z_limits)))
         self.n_cells = n_cells
 
-        self.xLims = self.shape.x_limits
-        self.yLims = self.shape.y_limits
-        self.zLims = self.shape.z_limits
+        self.x_limits = self.shape.x_limits
+        self.y_limits = self.shape.y_limits
+        self.z_limits = self.shape.z_limits
 
         self.xScale = max(self.shape.x_limits) - min(self.shape.x_limits)
         self.yScale = max(self.shape.y_limits) - min(self.shape.y_limits)
@@ -309,7 +286,8 @@ class RegularStrutLattice(StrutLattice):
             p1 = cell[i]
             self.lines.append([p1, p2])
 
-        self.generateLattice()
+        self.generate_lattice()
+
 
 def clamp(n, a, b):
     if n < a:

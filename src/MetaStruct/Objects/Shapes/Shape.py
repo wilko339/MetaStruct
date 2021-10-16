@@ -8,9 +8,9 @@ class Shape(Geometry):
 
     def __init__(self, design_space, x=0, y=0, z=0):
 
-        self.designSpace = design_space
+        self.design_space = design_space
 
-        super().__init__(self.designSpace)
+        super().__init__(self.design_space)
 
         self.name = self.__class__.__name__
 
@@ -18,9 +18,9 @@ class Shape(Geometry):
         self.y = y
         self.z = z
 
-        self.XX = self.designSpace.x_grid
-        self.YY = self.designSpace.y_grid
-        self.ZZ = self.designSpace.z_grid
+        self.XX = self.design_space.x_grid
+        self.YY = self.design_space.y_grid
+        self.ZZ = self.design_space.z_grid
 
         self.x_limits = self.y_limits = self.z_limits = None
 

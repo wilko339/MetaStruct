@@ -32,7 +32,7 @@ class HollowCube(Shape):
 
     def evaluate_point(self, x, y, z):
 
-        box = Cube(self.designSpace, self.x, self.y, self.z, self.dim) - \
-            Cube(self.designSpace, self.x, self.y, self.z, self.dim - self.t)
+        box = Cube(self.design_space, self.x, self.y, self.z, self.dim) - \
+              Cube(self.design_space, self.x, self.y, self.z, self.dim - self.t)
 
         return box.evaluate_point(x, y, z)

@@ -1,4 +1,4 @@
-from MetaStruct.Objects.DesignSpace import DesignSpace
+from MetaStruct.Objects.designspace import DesignSpace
 from MetaStruct.Objects.Lattices.Primitive import Primitive
 from MetaStruct.Objects.Shapes.Cylinder import Cylinder
 

@@ -2,7 +2,6 @@ import igl
 import mayavi.mlab as ml
 import numexpr as ne
 import numpy as np
-import skfmm
 from scipy.spatial.transform import Rotation as R
 from skimage import measure
 from wildmeshing import Tetrahedralizer
@@ -72,20 +71,6 @@ class Geometry:
     def evaluate_point(self, x, y, z):
 
         pass
-
-    def evaluate_distance(self):
-
-        if self.evaluated_grid is None:
-            self.evaluate_grid()
-
-        print(f'Evaluating distance field for {self.name}...')
-        try:
-            self.evaluated_distance = skfmm.distance(
-                self.evaluated_grid, dx=np.array(
-                    [self.design_space.x_step, self.design_space.y_step, self.design_space.z_step], dtype=np.double))
-        except ValueError:
-            print(self.evaluated_grid)
-            raise
 
     def translate(self, x, y, z):
 
@@ -223,7 +208,7 @@ class Geometry:
 
         c = igl.orientable_patches(self.faces)
 
-        self.faces, I = igl.orient_outward(self.vertices, self.faces, c[0])
+        self.faces, _ = igl.orient_outward(self.vertices, self.faces, c[0])
 
         if success:
             print('Mesh decimated')

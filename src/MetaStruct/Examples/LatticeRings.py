@@ -1,7 +1,7 @@
 import math
 
 from MetaStruct.Objects import Cylinder, GyroidNetwork, Gyroid, DoubleGyroidNetwork, BCC, Cube
-from MetaStruct.Objects.DesignSpace import DesignSpace
+from MetaStruct.Objects.designspace import DesignSpace
 from MetaStruct.Objects.Lattices.Diamond import Diamond
 from MetaStruct.Objects.Lattices.Primitive import Primitive
 

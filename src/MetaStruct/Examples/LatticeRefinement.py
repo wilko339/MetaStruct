@@ -3,7 +3,7 @@ import math
 import numpy as np
 
 from MetaStruct.Objects import Gyroid, Sphere
-from MetaStruct.Objects.DesignSpace import DesignSpace
+from MetaStruct.Objects.designspace import DesignSpace
 from MetaStruct.Objects.Shapes.Cuboid import Cuboid
 
 

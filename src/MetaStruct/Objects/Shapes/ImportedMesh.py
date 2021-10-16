@@ -1,19 +1,11 @@
-import cProfile
-import io
-import pstats
-from pathlib import Path
-from importlib import resources
-
 import igl
 import numpy as np
 
 from MetaStruct.Objects.Shapes.Shape import Shape
 
+
 class ImportedMesh(Shape):
     def __init__(self, design_space, filepath):
-
-        working_dir = Path.cwd()
-
         super().__init__(design_space, x=0, y=0, z=0)
 
         try:
@@ -40,10 +32,10 @@ class ImportedMesh(Shape):
         print('Calculating Signed Distances...')
 
         S, _, _ = igl.signed_distance(
-            self.designSpace.coordinate_list, vertices, faces)
+            self.design_space.coordinate_list, vertices, faces)
 
         self.evaluated_grid = S.reshape(
-            self.designSpace.resolution, self.designSpace.resolution, self.designSpace.resolution)
+            self.design_space.resolution, self.design_space.resolution, self.design_space.resolution)
 
     def evaluatePoint(self, x, y, z):
         raise NotImplementedError
