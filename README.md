@@ -14,7 +14,7 @@ Clone the code into a local folder:
 
     git clone https://github.com/wilko339/MetaStruct.git
 
-Navigate into the root directory of the repository and pip install locally using:
+Navigate into the root directory of the repository and pip install locally in dev mode using:
     
     pip install -e .
 
