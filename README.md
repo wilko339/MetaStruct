@@ -1,6 +1,6 @@
 # MetaStruct
 
-Python project for creating an open-source CAD designer using implicit equations. 
+A Python project for open-source CAD design using implicit equations (or FREP, volumetric geometry). 
 
 # License
 
@@ -8,9 +8,31 @@ This project is licensed under the MIT license.
 
 # Installation
 
-Clone the code using Github's cloning feature. Navigate into the root directory and pip install locally using:
+Ensure you are using Python 3.7 or above.
+
+Clone the code into a local folder:
+
+    git clone https://github.com/wilko339/MetaStruct.git
+
+Navigate into the root directory of the repository and pip install locally using:
     
     pip install -e .
+
+Use conda to install libigl python bindings:
+
+    conda install igl
+
+There are a few quick ways to check if things are working (until proper tests are written...)
+
+    import MetaStruct as mt
+    mt.latticed_sphere_example()
+
+Or...
+
+    import MetaStruct as mt
+    mt.voro_test()
+
+If all works, mayavi windows will open for each example with the geometry in.
 
 # Architecture
 
@@ -54,7 +76,7 @@ Various strut-based lattices are also available:
 4. Random (nearest neighbours)
 5. Regular Strut
 
-Some of these rely on a Point Cloud. 
+Some of these rely on a Point Cloud. There are some point clouds built in to assist with this process. 
 
 # Shapes
 
@@ -96,7 +118,7 @@ There are also some mathematical operators if required:
 
 # About the Project
 
-This project started out as an exercise in learning what implicit geometry is and how you can use it to make 3D objects. Development began in March 2020 and is ongoing. 
+This project started out as an exercise in learning what implicit geometry is and how it can be used to make 3D objects. Development began in March 2020 and is ongoing. 
 
 Credit goes to Added Scientific Ltd (addedscientific.com) for providing resources for the kick-off and early development of the project and for allowing the public release of this code for ongoing development.
 
