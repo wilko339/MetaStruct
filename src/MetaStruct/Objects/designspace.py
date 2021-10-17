@@ -42,17 +42,17 @@ class DesignSpace:
 
         if self.x_resolution == 0:
 
-            X, self.x_step = np.linspace(self.x_lower - offset,
+            self.X, self.x_step = np.linspace(self.x_lower - offset,
                                          self.x_upper + offset,
                                          resolution,
                                          retstep=True,
                                          dtype=DesignSpace.DATA_TYPE)
-            Y, self.y_step = np.linspace(self.y_lower - offset,
+            self.Y, self.y_step = np.linspace(self.y_lower - offset,
                                          self.y_upper + offset,
                                          resolution,
                                          retstep=True,
                                          dtype=DesignSpace.DATA_TYPE)
-            Z, self.z_step = np.linspace(self.z_lower - offset,
+            self.Z, self.z_step = np.linspace(self.z_lower - offset,
                                          self.z_upper + offset,
                                          resolution,
                                          retstep=True,
@@ -60,17 +60,17 @@ class DesignSpace:
 
         else:
 
-            X, self.x_step = np.linspace(self.x_lower - offset,
+            self.X, self.x_step = np.linspace(self.x_lower - offset,
                                          self.x_upper + offset,
                                          x_resolution,
                                          retstep=True,
                                          dtype=DesignSpace.DATA_TYPE)
-            Y, self.y_step = np.linspace(self.y_lower - offset,
+            self.Y, self.y_step = np.linspace(self.y_lower - offset,
                                          self.y_upper + offset,
                                          y_resolution,
                                          retstep=True,
                                          dtype=DesignSpace.DATA_TYPE)
-            Z, self.z_step = np.linspace(self.z_lower - offset,
+            self.Z, self.z_step = np.linspace(self.z_lower - offset,
                                          self.z_upper + offset,
                                          z_resolution,
                                          retstep=True,
@@ -78,9 +78,9 @@ class DesignSpace:
 
         print('Generating Sample Grid in Design Space')
 
-        self.x_grid, self.y_grid, self.z_grid = np.meshgrid(X,
-                                                            Y,
-                                                            Z,
+        self.x_grid, self.y_grid, self.z_grid = np.meshgrid(self.X,
+                                                            self.Y,
+                                                            self.Z,
                                                             indexing='ij')
 
         if self.x_resolution == 0:
