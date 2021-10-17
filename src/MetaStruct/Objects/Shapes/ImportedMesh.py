@@ -1,5 +1,6 @@
 import igl
 import numpy as np
+from scipy.interpolate import RegularGridInterpolator
 
 from MetaStruct.Objects.Shapes.Shape import Shape
 
@@ -37,5 +38,14 @@ class ImportedMesh(Shape):
         self.evaluated_grid = S.reshape(
             self.design_space.resolution, self.design_space.resolution, self.design_space.resolution)
 
-    def evaluatePoint(self, x, y, z):
-        raise NotImplementedError
+    def evaluate_point(self, x, y, z):
+
+        interp = RegularGridInterpolator((self.design_space.X, self.design_space.Y, self.design_space.Z),
+                                         self.evaluated_grid)
+        pts = np.empty(([len(x), 3]))
+        pts[:, 0] = x
+        pts[:, 1] = y
+        pts[:, 2] = z
+
+        return interp(pts)
+
