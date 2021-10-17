@@ -49,6 +49,3 @@ class Shape(Geometry):
     def __mul__(self, other):
 
         return Multiply(self, other)
-
-    def evaluate_point(self, x, y, z):
-        return self.evaluate_point(x, y, z)
