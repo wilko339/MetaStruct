@@ -36,18 +36,18 @@ If all works, mayavi windows will open for each example with the geometry in.
 
 # Architecture
 
-MetaStruct uses object-oriented programming and defines all shapes and operations as objects, each with certain attributes and methods. All objects inherit from the "Geometry" class, which is where the "previewModel()" and "save_mesh()" methods (among others) are located. Everything requires a "DesignSpace" object, containing the arrays of X, Y and Z coordinates to evaluate the functions at. Marching cubes is then used to extract a trianglar mesh from the distance field which can be previewed or cleaned with libigl and exported.
+MetaStruct uses object-oriented programming and defines all shapes and operations as objects, each with certain attributes and methods. All objects inherit from the "Geometry" class, which is where the "previewModel()" and "save_mesh()" methods (among others) are located. Everything requires a "DesignSpace" object, containing the arrays of X, Y and Z coordinates to evaluate the functions at. Marching cubes is then used to extract a triangular mesh from the distance field which can be previewed or cleaned with libigl and exported.
 
 # Workflow
 
-1. Define a design space using in instance of "DesignSpace":
-The design space contains the x, y, z points where all subsequent functions will be evaluated. This is where the resolution of the model is determined using the "res" argument. This determines the number of sample points in all 3 axes. Use the "xBounds", "yBounds" and "zBounds" arguments to set the size of the bounding box containing the model. There are individual resolution options available for the three axes (x_resolution etc) if required. This is a more efficient way if your bounding box has siginificantly different x, y and z sizes.
+1. Define a design space using an instance of "DesignSpace":
+The design space contains the x, y, z points where all subsequent functions will be evaluated. This is where the resolution of the model is determined using the "res" argument. This determines the number of sample points in all 3 axes. Use the "x_bounds", "y_bounds" and "z_bounds" arguments to set the size of the bounding box containing the model. There are individual resolution options available for the three axes (x_resolution etc) if required. This is a more efficient way if your bounding box has significantly different x, y and z sizes.
 
 2. Define shapes:
 All shapes are declared in the standard OOP way, ie "sphere = Sphere(ds, args)" where ds is a DesignSpace instance args are the arguments. The design space MUST ALWAYS be passed into primitive shapes and lattices (boolean ops inherit the design space from the given shapes) as the first argument. All shapes should have default values for the sizing (eg a Sphere has a radius of 1 by default). These can be set by passing in the arguments when calling the object. The x, y and z arguments for lattices and shapes are the coordinates of the centre point for the shape and all default to 0. Change these to move the object.
 
 3. Previewing a Model:
-All shapes use the "preview_Model()" method to generate a 3D view using Mayavi. Simply call this method on an object (ie Sphere(designSpace).previewModel()) to see a render of the object. A clipping plane can be provided by passing the axis as a string into the "clip" argument (ie previewModel(clip='x'). The coordinate of that clipping plane can also be specified with the "clipVal" argument. The side of the plane that is clipped can be switched by using the "flipClip" argument and passing a boolean True or False. This is where the implicit calculations for the shapes will normally be evaluated. Marching Cubes is used to generate the mesh to be rendered or saved to a file.
+All shapes use the "preview_model()" method to generate a 3D view using Mayavi. Simply call this method on an object (ie Sphere(designSpace).previewModel()) to see a render of the object. A clipping plane can be provided by passing the axis as a string into the "clip" argument (ie previewModel(clip='x'). The coordinate of that clipping plane can also be specified with the "clipVal" argument. The side of the plane that is clipped can be switched by using the "flipClip" argument and passing a boolean True or False. This is where the implicit calculations for the shapes will normally be evaluated. Marching Cubes is used to generate the mesh to be rendered or saved to a file.
 
 # Lattices
 
@@ -58,7 +58,7 @@ Currently, the following TPMS lattices are supported:
 3. Primitive 
 4. Diamond
 5. BCC (TPMS Approximation)
-6. Composite Lattice (a mix of any of the above)
+6. Composite Lattice (a mix of the above)
 
 All of these TPMS lattices have the same input arguments.
 
