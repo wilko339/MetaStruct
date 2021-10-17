@@ -4,7 +4,6 @@ import numexpr as ne
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from skimage import measure
-from wildmeshing import Tetrahedralizer
 
 from MetaStruct.Functions.Remap import remap
 
@@ -107,27 +106,6 @@ class Geometry:
         except ValueError:
             print(f'No isosurface found at specified level ({level})')
             raise
-
-    def save_tet_mesh(self, filename=None, edge_length_r=1 / 100, epsilon=1 / 2000):
-
-        if filename is None:
-            self.filename = self.name + '.msh'
-
-        if filename is not None:
-            if filename[:-4] != '.msh':
-                self.filename = filename + '.msh'
-
-        tetra = Tetrahedralizer(
-            max_its=50, edge_length_r=edge_length_r, epsilon=epsilon)
-
-        if self.vertices is None:
-            self.find_surface()
-
-        tetra.set_mesh(self.vertices, self.faces)
-
-        tetra.tetrahedralize()
-
-        tetra.save(self.filename)
 
     def preview_model(self, clip=None, clip_value=0, flip_clip=False, mode='surface', level=0, rgb=(22, 94, 111)):
 
