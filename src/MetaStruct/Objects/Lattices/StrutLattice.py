@@ -4,9 +4,7 @@ import pstats
 
 import numexpr as ne
 import numpy as np
-import progressbar
-import pyvoro
-from scipy.spatial import Delaunay, ConvexHull
+import scipy
 from sklearn.neighbors import NearestNeighbors
 
 from MetaStruct.Objects.Shapes.Line import Line
@@ -38,7 +36,7 @@ class StrutLattice(Shape):
         self.blend = blend
 
         if point_cloud is not None:
-            if not point_cloud.points:
+            if len(point_cloud.points)==0:
                 raise ValueError('Point cloud has no points.')
             self.point_cloud = point_cloud
             self.points = self.point_cloud.points
@@ -63,20 +61,8 @@ class StrutLattice(Shape):
 
         self.evaluated_grid = initial_line.evaluated_grid
 
-        widgets = [' [',
-                   progressbar.Timer(format='elapsed time: %(elapsed)s'),
-                   '] ',
-                   progressbar.Bar('*'), ' (',
-                   progressbar.ETA(), ') '
-                   ]
-
-        bar = progressbar.ProgressBar(max_value=len(self.lines),
-                                      widgets=widgets).start()
-
         for i in range(1, len(self.lines)):
             self.evaluated_grid = next(self.new_grid(self.lines[i]))
-            bar.update(i)
-        bar.finish()
 
     def new_grid(self, line):
 
@@ -159,21 +145,24 @@ class DelaunayLattice(StrutLattice):
 
         self.designSpace = design_space
         self.point_cloud = point_cloud
-        self.delaunay = Delaunay(self.point_cloud.points, qhull_options='Qbb Qc Qx QJ')
+        self.delaunay = scipy.spatial.Delaunay(self.point_cloud.points, qhull_options='Qbb Qc Qx QJ')
 
-        self.xLims = self.point_cloud.shape.x_limits
-        self.yLims = self.point_cloud.shape.y_limits
-        self.zLims = self.point_cloud.shape.z_limits
+        self.x_limits = self.point_cloud.shape.x_limits
+        self.y_limits = self.point_cloud.shape.y_limits
+        self.z_limits = self.point_cloud.shape.z_limits
 
         for simplex in self.delaunay.simplices:
-            line1 = [self.delaunay.points[simplex[0]], self.delaunay.points[simplex[1]]]
-            line2 = [self.delaunay.points[simplex[1]], self.delaunay.points[simplex[2]]]
-            line3 = [self.delaunay.points[simplex[2]], self.delaunay.points[simplex[3]]]
-            line4 = [self.delaunay.points[simplex[3]], self.delaunay.points[simplex[0]]]
+            line1 = tuple([simplex[0], simplex[1]])
+            line2 = tuple([simplex[1], simplex[2]])
+            line3 = tuple([simplex[2], simplex[3]])
+            line4 = tuple([simplex[3], simplex[0]])
             self.lines.append(line1)
             self.lines.append(line2)
             self.lines.append(line3)
             self.lines.append(line4)
+
+        self.lines = [list(line) for line in set(self.lines)]
+        self.lines = [[self.delaunay.points[line[0]], self.delaunay.points[line[1]]] for line in self.lines]
 
         self.generate_lattice()
 
@@ -185,23 +174,24 @@ class ConvexHullLattice(StrutLattice):
 
         self.designSpace = design_space
         self.point_cloud = point_cloud
-        self.convex_hull = ConvexHull(self.point_cloud.points)
+        self.convex_hull = scipy.spatial.ConvexHull(self.point_cloud.points)
 
-        self.xLims = self.point_cloud.shape.x_limits
-        self.yLims = self.point_cloud.shape.y_limits
-        self.zLims = self.point_cloud.shape.z_limits
+        self.x_limits = self.point_cloud.shape.x_limits
+        self.y_limits = self.point_cloud.shape.y_limits
+        self.z_limits = self.point_cloud.shape.z_limits
 
         self.flat_simplices = [item for simplex in self.convex_hull.simplices for item in simplex]
 
         for simplex in self.convex_hull.simplices:
-            line1 = [self.convex_hull.points[simplex[0]], self.convex_hull.points[simplex[1]]]
-            line2 = [self.convex_hull.points[simplex[1]], self.convex_hull.points[simplex[2]]]
-            line3 = [self.convex_hull.points[simplex[2]], self.convex_hull.points[simplex[0]]]
+            line1 = tuple([simplex[0], simplex[1]])
+            line2 = tuple([simplex[1], simplex[2]])
+            line3 = tuple([simplex[2], simplex[0]])
             self.lines.append(line1)
             self.lines.append(line2)
             self.lines.append(line3)
 
-        # TODO: Remove duplicate lines from self.lines
+        self.lines = [list(line) for line in set(self.lines)]
+        self.lines = [[self.convex_hull.points[line[0]], self.convex_hull.points[line[1]]] for line in self.lines]
 
         self.generate_lattice()
 
@@ -211,33 +201,15 @@ class VoronoiLattice(StrutLattice):
     def __init__(self, design_space, point_cloud=None, r=0.02):
         super().__init__(design_space, r, point_cloud)
 
-        # self.voronoi = Voronoi(self.point_cloud.points, qhull_options='Qbb Qc Qx')
+        self.voronoi = scipy.spatial.Voronoi(self.point_cloud.points, qhull_options='Qbb Qc Qx')
 
         self.x_limits = self.point_cloud.shape.x_limits
         self.y_limits = self.point_cloud.shape.y_limits
         self.z_limits = self.point_cloud.shape.z_limits
 
-        self.voronoi = pyvoro.compute_voronoi(points=point_cloud.points, limits=[self.x_limits, self.y_limits,
-                                                                                 self.z_limits], dispersion=2)
+        for ridge in self.voronoi.ridge_points:
 
-        cells = []
-
-        for cell in self.voronoi:
-            cell_vertices = cell['vertices']
-            faces = cell['faces']
-
-            for face in faces:
-                vertices = face['vertices']
-                for i in range(len(vertices)):
-                    if i < len(vertices) - 1:
-                        self.lines.append(
-                            tuple([tuple(cell_vertices[vertices[i]]), tuple(cell_vertices[vertices[i + 1]])]))
-                    else:
-                        self.lines.append(tuple([tuple(cell_vertices[vertices[i]]), tuple(cell_vertices[vertices[0]])]))
-
-        # TODO Remove duplicated lines from self.lines
-
-        self.lines = list(set(self.lines))
+            self.lines.append([self.voronoi.points[i] for i in ridge])
 
         self.generate_lattice()
 
