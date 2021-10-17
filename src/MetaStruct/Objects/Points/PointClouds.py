@@ -33,8 +33,10 @@ class PointCloud:
 
 class RandomPoints(PointCloud):
 
-    def __init__(self, n_points=50, shape=None, points=None):
+    def __init__(self, n_points=50, shape=None, points=None, seed=None):
         super().__init__(n_points, shape, points)
+        if seed is not None:
+            np.random.seed(seed)
         self.points = np.random.rand(n_points, 3)
         self.generate_points(self.n_points)
 
