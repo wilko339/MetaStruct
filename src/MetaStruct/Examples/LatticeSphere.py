@@ -1,20 +1,24 @@
-from MetaStruct.Objects import Union, Gyroid
+from MetaStruct.Objects.Booleans.Boolean import Union
+from MetaStruct.Objects.Lattices.Gyroid import Gyroid
 from MetaStruct.Objects.designspace import DesignSpace
 from MetaStruct.Objects.Shapes.HollowSphere import HollowSphere
 
 
-def latticedSphereExample(outerRad=2, outerSkinThickness=0.1, innerRad=1, innerSkinThickness=0.1):
+def latticed_sphere_example(outer_radius=2, outer_skin_thickness=0.1, inner_radius=1, inner_skin_thickness=0.1):
 
-    ds = DesignSpace(resolution=300)
+    ds = DesignSpace(resolution=200, x_bounds=[-2, 0], y_bounds=[-2, 2], z_bounds=[-2, 2])
 
-    outerSkin = HollowSphere(design_space=ds, r=outerRad, t=outerSkinThickness)
+    outer_skin = HollowSphere(design_space=ds, r=outer_radius, t=outer_skin_thickness)
 
-    latticeSection = HollowSphere(r=outerRad-outerSkinThickness,
-                                  t=outerRad - outerSkinThickness - innerRad,
-                                  design_space=ds) / Gyroid(designSpace=ds)
+    lattice_section = HollowSphere(r=outer_radius - outer_skin_thickness,
+                                  t=outer_radius - outer_skin_thickness - inner_radius,
+                                  design_space=ds) / Gyroid(design_space=ds)
 
-    innerSkin = HollowSphere(r=innerRad, t=innerSkinThickness, design_space=ds)
+    inner_skin = HollowSphere(r=inner_radius, t=inner_skin_thickness, design_space=ds)
 
-    s1 = Union(outerSkin, Union(latticeSection, innerSkin))
+    s1 = Union(outer_skin, Union(lattice_section, inner_skin))
 
-    s1.previewModel(clip='x')
+    s1.preview_model(clip='x')
+
+if __name__ == '__main__':
+    latticed_sphere_example()
