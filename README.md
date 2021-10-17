@@ -121,7 +121,3 @@ There are also some mathematical operators if required:
 This project started out as an exercise in learning what implicit geometry is and how it can be used to make 3D objects. Development began in March 2020 and is ongoing. 
 
 Credit goes to Added Scientific Ltd (addedscientific.com) for providing resources for the kick-off and early development of the project and for allowing the public release of this code for ongoing development.
-
-# Author
-
-Toby Wilkinson was a computational research engineer at Added Scientific between January 2020 and November 2021. 
