@@ -1,5 +1,4 @@
 import igl
-import mayavi.mlab as ml
 import numexpr as ne
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -108,6 +107,8 @@ class Geometry:
             raise
 
     def preview_model(self, clip=None, clip_value=0, flip_clip=False, mode='surface', level=0, rgb=(22, 94, 111)):
+
+        import mayavi.mlab as ml
 
         assert mode in [
             'volume', 'surface'], 'Invalid mode selected, use either "volume" or "surface".'
