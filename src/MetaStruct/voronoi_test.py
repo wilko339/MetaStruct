@@ -1,7 +1,10 @@
 from MetaStruct.Objects.designspace import DesignSpace
 from MetaStruct.Objects.Shapes.Cube import Cube
+from MetaStruct.Objects.Shapes.Sphere import Sphere
+from MetaStruct.Objects.Shapes.Shape import Shape
 from MetaStruct.Objects.Points.PointClouds import *
 from MetaStruct.Objects.Lattices.StrutLattice import *
+from MetaStruct.Objects.Booleans.Boolean import *
 
 import cProfile
 import io
@@ -20,17 +23,16 @@ def profile(func):
         return retval
     return wrapper
 
-@profile
+#@profile
 def voro_test():
-    ds = DesignSpace(100)
-    shape = Cube(ds)
+    ds = DesignSpace(150)
+    region = Cube(ds)
 
-    points = RandomPoints(5, shape, seed=1)
+    points = LHSPoints(40, region)
 
-    lat = VoronoiLattice(ds, points, r=0.05)
+    lat = VoronoiLattice(ds, points, r=0.03)
 
     lat.preview_model()
-
 
 if __name__ == "__main__":
     voro_test()
