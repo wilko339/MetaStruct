@@ -10,41 +10,32 @@ class Vector:
 
     @property
     def magnitude(self):
-        x = self.x
-        y = self.y
-        z = self.z
-        return ne.evaluate('sqrt(x**2 + y**2 + z**2)')
+
+        return ne.evaluate('sqrt(x**2 + y**2 + z**2)', local_dict={'x': self.x,
+                                                                   'y': self.y,
+                                                                   'z': self.z})
 
     def __sub__(self, other):
         return subtract(self, other)
 
     def __mul__(self, other):
-        return mult(self, other)
+        return multiplication(self, other)
 
 
 def subtract(a, b):
-    ax = a.x
-    ay = a.y
-    az = a.z
 
-    bx = b.x
-    by = b.y
-    bz = b.z
+    array_x = ne.evaluate('a-b', local_dict={'a': a.x, 'b': b.x})
+    array_y = ne.re_evaluate(local_dict={'a': a.y, 'b': b.y})
+    array_z = ne.re_evaluate(local_dict={'a': a.z, 'b': b.z})
 
-    arrx = ne.evaluate('ax-bx')
-    arry = ne.evaluate('ay-by')
-    arrz = ne.evaluate('az-bz')
-
-    return Vector([arrx, arry, arrz])
+    return Vector([array_x, array_y, array_z])
 
 
-def mult(a, b):
-    ax = a.x
-    ay = a.y
-    az = a.z
+def multiplication(a, b):
 
-    bx = b.x
-    by = b.y
-    bz = b.z
-
-    return ne.evaluate('(ax*bx)+(ay*by)+(az*bz)')
+    return ne.evaluate('(ax*bx)+(ay*by)+(az*bz)', local_dict={'ax': a.x,
+                                                              'bx': b.x,
+                                                              'ay': a.y,
+                                                              'by': b.y,
+                                                              'az': a.z,
+                                                              'bz': b.z})

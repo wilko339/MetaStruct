@@ -45,6 +45,33 @@ class StrutLattice(Shape):
 
         self.n_lines = len(self.lines)
 
+        self.lines = np.array(self.lines)
+
+        stacked = np.array([self.x_grid, self.y_grid, self.z_grid]).reshape((self.design_space.resolution, self.design_space.resolution, self.design_space.resolution, 3))
+
+        ba = self.lines[:, 1, :] - self.lines[:, 0, :]
+
+        grid = np.full_like(self.x_grid, np.inf)
+
+        for line in ba:
+
+            pa = stacked - line[np.newaxis, np.newaxis, :]
+
+            paba = pa*line
+            baba = line*line
+
+            h = np.clip(paba/baba, 0, 1)
+
+            ba_h = line * h
+
+            out = np.linalg.norm(pa-ba_h, axis=3)-self.r
+
+            grid = ne.evaluate('where(grid<out, grid, out)')
+
+        print(grid[0, 0, :])
+
+        #self.evaluated_grid = grid
+
         try:
 
             initial_line = Line(self.design_space, self.lines[0][0], self.lines[0][1], r=self.r)
@@ -64,6 +91,10 @@ class StrutLattice(Shape):
         for i in range(1, len(self.lines)):
             self.evaluated_grid = next(self.new_grid(self.lines[i]))
 
+        print(self.evaluated_grid[0, 0, :])
+
+        raise
+
     def new_grid(self, line):
 
         line = Line(self.design_space, line[0], line[1], r=self.r)
@@ -82,6 +113,7 @@ class StrutLattice(Shape):
             b = self.blend
             yield ne.evaluate(
                 '-log(where((exp(-b*line_grid) + exp(-b*grid))>0.000, exp(-b*line_grid) + exp(-b*grid), 0.000))/b')
+
 
 
 class RandomLattice(StrutLattice):

@@ -34,17 +34,14 @@ class Line(Shape):
         pa = Vector([x, y, z]) - self.p1
         ba = self.p2 - self.p1
 
-        bax = ba.x
-        bay = ba.y
-        baz = ba.z
-
         paba = pa*ba
         baba = ba*ba
 
         h = clamp(ne.evaluate('(paba)/(baba)'), 0.0, 1.0)
 
-        baxh = ne.evaluate('ba*h', local_dict={'ba': bax, 'h': h})
-        bayh = ne.re_evaluate({'ba': bay, 'h': h})
-        bazh = ne.re_evaluate({'ba': baz, 'h': h})
+        baxh = ne.evaluate('ba*h', local_dict={'ba': ba.x, 'h': h})
+        bayh = ne.re_evaluate({'ba': ba.y, 'h': h})
+        bazh = ne.re_evaluate({'ba': ba.z, 'h': h})
 
+        #print(norm(pa-Vector([baxh, bayh, bazh])) - self.r)
         return norm(pa-Vector([baxh, bayh, bazh])) - self.r
