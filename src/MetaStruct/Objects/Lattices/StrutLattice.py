@@ -7,7 +7,6 @@ import numpy as np
 import scipy
 from sklearn.neighbors import NearestNeighbors
 
-from MetaStruct.Objects.Shapes.Line import Line
 from MetaStruct.Objects.Shapes.Shape import Shape
 
 
@@ -18,7 +17,7 @@ def profile(func):
         retval = func(*args, **kwargs)
         pr.disable()
         s = io.StringIO()
-        sortby = 'cumulative'
+        sortby = 'tottime'
         ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
         ps.print_stats()
         print(s.getvalue())
@@ -41,85 +40,68 @@ class StrutLattice(Shape):
             self.point_cloud = point_cloud
             self.points = self.point_cloud.points
 
+    #@profile
     def generate_lattice(self):
+
+        data_type = self.design_space.DATA_TYPE
+
+        print('Generating Struts...')
 
         self.n_lines = len(self.lines)
 
-        self.lines = np.array(self.lines)
+        self.lines = np.array(self.lines, dtype=data_type)
 
-        stacked = np.array([self.x_grid, self.y_grid, self.z_grid]).reshape((self.design_space.resolution, self.design_space.resolution, self.design_space.resolution, 3))
+        vec = np.array([self.x_grid, self.y_grid, self.z_grid], dtype=data_type)
 
         ba = self.lines[:, 1, :] - self.lines[:, 0, :]
 
-        grid = np.full_like(self.x_grid, np.inf)
+        grid = np.full_like(self.x_grid, np.inf, dtype=data_type)
 
-        for line in ba:
+        for i, line in enumerate(self.lines[:, 0, :]):
 
-            pa = stacked - line[np.newaxis, np.newaxis, :]
+            pa = vec - line[:, np.newaxis, np.newaxis, np.newaxis]
 
-            paba = pa*line
-            baba = line*line
+            paba = np.einsum('ijkl,i->jkl', pa, ba[i], dtype=data_type)
+
+            baba = np.dot(ba[i], ba[i])
 
             h = np.clip(paba/baba, 0, 1)
 
-            ba_h = line * h
+            ba_h = ba[i][:, None, None, None]*h
 
-            out = np.linalg.norm(pa-ba_h, axis=3)-self.r
+            out = np.linalg.norm(pa-ba_h, axis=0)-self.r
 
-            grid = ne.evaluate('where(grid<out, grid, out)')
+            if i == 0:
 
-        print(grid[0, 0, :])
+                if self.blend == 0:
 
-        #self.evaluated_grid = grid
+                    grid = ne.evaluate('where(grid<out, grid, out)', casting='same_kind')
 
-        try:
+                else:
 
-            initial_line = Line(self.design_space, self.lines[0][0], self.lines[0][1], r=self.r)
+                    grid = ne.evaluate(
+                        '-log(where((exp(-b*out) + exp(-b*grid))>0.000, exp(-b*out) + exp(-b*grid), 0.000))/b',
+                        local_dict={'b': self.blend, 'grid': grid, 'out': out}, casting='same_kind')
 
-        except IndexError:
+            else:
 
-            print('No line points found.')
+                if self.blend == 0:
 
-            raise
+                    grid = ne.re_evaluate(local_dict={'grid': grid, 'out': out})
 
-        print(f'Generating Lattice with {self.n_lines} lines...')
+                else:
 
-        initial_line.evaluate_grid(verbose=False)
+                    grid = ne.re_evaluate(local_dict={'b': self.blend, 'grid': grid, 'out': out})
 
-        self.evaluated_grid = initial_line.evaluated_grid
+        self.evaluated_grid = grid
 
-        for i in range(1, len(self.lines)):
-            self.evaluated_grid = next(self.new_grid(self.lines[i]))
-
-        print(self.evaluated_grid[0, 0, :])
-
-        raise
-
-    def new_grid(self, line):
-
-        line = Line(self.design_space, line[0], line[1], r=self.r)
-
-        line.evaluate_grid(verbose=False)
-
-        line_grid = line.evaluated_grid
-
-        grid = self.evaluated_grid
-
-        if self.blend == 0:
-
-            yield ne.evaluate('where(grid<line_grid, grid, line_grid)')
-
-        else:
-            b = self.blend
-            yield ne.evaluate(
-                '-log(where((exp(-b*line_grid) + exp(-b*grid))>0.000, exp(-b*line_grid) + exp(-b*grid), 0.000))/b')
-
+        return
 
 
 class RandomLattice(StrutLattice):
 
-    def __init__(self, design_space, point_cloud, num_neighbours=4, radius=None, r=0.02):
-        super().__init__(design_space, r, point_cloud)
+    def __init__(self, design_space, point_cloud, num_neighbours=4, radius=None, r=0.02, blend=0):
+        super().__init__(design_space, r, point_cloud, blend)
 
         self.num_neighbours = num_neighbours
         self.radius = radius
@@ -172,12 +154,12 @@ class RandomLattice(StrutLattice):
 
 class DelaunayLattice(StrutLattice):
 
-    def __init__(self, design_space, point_cloud=None, r=0.02):
-        super().__init__(design_space, r, point_cloud)
+    def __init__(self, design_space, point_cloud=None, r=0.02, blend=0):
+        super().__init__(design_space, r, point_cloud, blend)
 
         self.designSpace = design_space
         self.point_cloud = point_cloud
-        self.delaunay = scipy.spatial.Delaunay(self.point_cloud.points, qhull_options='Qbb Qc Qx QJ')
+        self.delaunay = scipy.spatial.Delaunay(self.point_cloud.points, qhull_options='Qbb Qc Qx')
 
         self.x_limits = self.point_cloud.shape.x_limits
         self.y_limits = self.point_cloud.shape.y_limits
@@ -201,8 +183,8 @@ class DelaunayLattice(StrutLattice):
 
 class ConvexHullLattice(StrutLattice):
 
-    def __init__(self, design_space, point_cloud=None, r=0.02):
-        super().__init__(design_space, r, point_cloud)
+    def __init__(self, design_space, point_cloud=None, r=0.02, blend=0):
+        super().__init__(design_space, r, point_cloud, blend)
 
         self.designSpace = design_space
         self.point_cloud = point_cloud
@@ -230,8 +212,8 @@ class ConvexHullLattice(StrutLattice):
 
 class VoronoiLattice(StrutLattice):
 
-    def __init__(self, design_space, point_cloud=None, r=0.02):
-        super().__init__(design_space, r, point_cloud)
+    def __init__(self, design_space, point_cloud=None, r=0.02, blend=0):
+        super().__init__(design_space, r, point_cloud, blend)
 
         self.voronoi = scipy.spatial.Voronoi(self.point_cloud.points, qhull_options='Qbb Qc Qx')
 
@@ -239,9 +221,26 @@ class VoronoiLattice(StrutLattice):
         self.y_limits = self.point_cloud.shape.y_limits
         self.z_limits = self.point_cloud.shape.z_limits
 
-        for ridge in self.voronoi.ridge_points:
+        for region in self.voronoi.regions:
 
-            self.lines.append([self.voronoi.points[i] for i in ridge])
+            try:
+                region.remove(-1)
+
+            except ValueError:
+                pass
+
+            for i, point in enumerate(region):
+
+                if i == len(region)-1:
+
+                    self.lines.append(tuple([point, region[0]]))
+
+                else:
+
+                    self.lines.append(tuple([point, region[i+1]]))
+
+        self.lines = [list(line) for line in set(self.lines)]
+        self.lines = [[self.voronoi.vertices[line[0]], self.voronoi.vertices[line[1]]] for line in self.lines]
 
         self.generate_lattice()
 
