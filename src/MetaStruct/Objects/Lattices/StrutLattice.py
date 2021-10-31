@@ -35,19 +35,19 @@ class StrutLattice(Shape):
         self.blend = blend
 
         if point_cloud is not None:
-            if len(point_cloud.points)==0:
+            if len(point_cloud.points) == 0:
                 raise ValueError('Point cloud has no points.')
             self.point_cloud = point_cloud
             self.points = self.point_cloud.points
 
-    #@profile
+    @profile
     def generate_lattice(self):
 
         data_type = self.design_space.DATA_TYPE
 
-        print('Generating Struts...')
-
         self.n_lines = len(self.lines)
+
+        print(f'Generating {self.n_lines} Struts...')
 
         self.lines = np.array(self.lines, dtype=data_type)
 
