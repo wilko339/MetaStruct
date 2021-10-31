@@ -198,8 +198,8 @@ class ConvexHullLattice(StrutLattice):
 
 class VoronoiLattice(StrutLattice):
 
-    def __init__(self, design_space, point_cloud=None, r=0.02):
-        super().__init__(design_space, r, point_cloud)
+    def __init__(self, design_space, point_cloud=None, r=0.02, blend=0):
+        super().__init__(design_space, r, point_cloud, blend)
 
         self.voronoi = scipy.spatial.Voronoi(self.point_cloud.points, qhull_options='Qbb Qc Qx')
 
@@ -207,9 +207,26 @@ class VoronoiLattice(StrutLattice):
         self.y_limits = self.point_cloud.shape.y_limits
         self.z_limits = self.point_cloud.shape.z_limits
 
-        for ridge in self.voronoi.ridge_points:
+        for region in self.voronoi.regions:
 
-            self.lines.append([self.voronoi.points[i] for i in ridge])
+            try:
+                region.remove(-1)
+
+            except ValueError:
+                pass
+
+            for i, point in enumerate(region):
+
+                if i == len(region)-1:
+
+                    self.lines.append(tuple([point, region[0]]))
+
+                else:
+
+                    self.lines.append(tuple([point, region[i+1]]))
+
+        self.lines = [list(line) for line in set(self.lines)]
+        self.lines = [[self.voronoi.vertices[line[0]], self.voronoi.vertices[line[1]]] for line in self.lines]
 
         self.generate_lattice()
 
