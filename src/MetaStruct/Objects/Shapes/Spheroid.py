@@ -30,13 +30,23 @@ class Spheroid(Shape):
 
     def evaluate_point(self, x, y, z):
 
-        x0 = self.x
-        y0 = self.y
-        z0 = self.y
-        xr = self.xr
-        yr = self.yr
-        zr = self.zr
+        if self.design_space.create_grids is True:
 
-        expr = '((x-x0)**2)/(xr**2) + ((y-y0)**2)/(yr**2) + ((z-z0)**2)/(zr**2) - 1'
+            x0 = self.x
+            y0 = self.y
+            z0 = self.y
+            xr = self.xr
+            yr = self.yr
+            zr = self.zr
 
-        return ne.evaluate(expr)
+            expr = '((x-x0)**2)/(xr**2) + ((y-y0)**2)/(yr**2) + ((z-z0)**2)/(zr**2) - 1'
+
+            return ne.evaluate(expr)
+
+        else:
+
+            x = x[:, None, None]
+            y = y[None, :, None]
+            z = z[None, None, :]
+
+            return ((x-self.x)**2)/(self.xr**2) + ((y-self.y)**2)/(self.yr**2) + ((z-self.z)**2)/(self.zr**2) - 1

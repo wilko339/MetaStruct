@@ -1,4 +1,5 @@
 import numexpr as ne
+import numpy as np
 
 from MetaStruct.Objects.Shapes.Spheroid import Spheroid
 
@@ -14,12 +15,31 @@ class Sphere(Spheroid):
 
         return f'Sphere({self.x}, {self.y}, {self.z}, {self.r})'
 
-    def evaluate_point(self, x, y, z):
+    def evaluate_point(self, x, y, z, broadcasting=True):
 
-        x0 = self.x
-        y0 = self.y
-        z0 = self.z
+        if broadcasting is False:
 
-        r = self.r
+            x0 = self.x
+            y0 = self.y
+            z0 = self.z
 
-        return ne.evaluate('sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2) -r')
+            r = self.r
+
+            return ne.evaluate('sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2) -r')
+
+        else:
+
+            print('Broadcasting...')
+
+            # return ne.evaluate('sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2) -r', local_dict={'x0': self.x,
+            #                                                                              'y0': self.y,
+            #                                                                              'z0': self.z,
+            #                                                                              'r': self.r,
+            #                                                                              'x': x[:, None, None],
+            #                                                                              'y': y[None, :, None],
+            #                                                                              'z': z[None, None, :]
+            #                                                                              })
+
+            return np.sqrt(
+                (x[:, None, None] - self.x) ** 2 + (y[None, :, None] - self.y) ** 2 + (z[None, None, :] - self.z) ** 2) \
+                   - self.r
