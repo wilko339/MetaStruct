@@ -81,11 +81,18 @@ class Geometry:
         if verbose is True:
             print(f'Evaluating grid points for {self.name}...')
 
-        self.evaluated_grid = np.array(
-            self.evaluate_point(self.x_grid, self.y_grid, self.z_grid))
-        if gradients is True:
-            self.gradient_grid = np.gradient(
-                self.evaluated_grid, self.design_space.resolution)
+        if self.design_space.create_grids is True:
+
+            self.evaluated_grid = np.array(
+                self.evaluate_point(self.x_grid, self.y_grid, self.z_grid))
+            if gradients is True:
+                self.gradient_grid = np.gradient(
+                    self.evaluated_grid, self.design_space.resolution)
+
+        else:
+            self.evaluated_grid = np.array(
+                self.evaluate_point(self.design_space.X, self.design_space.Y, self.design_space.Z)
+            )
 
     def find_surface(self, level=0):
 
