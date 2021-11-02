@@ -3,6 +3,7 @@ import numpy as np
 
 class DesignSpace:
     DATA_TYPE = np.float32
+    OFFSET = 0.1
 
     def __init__(self,
                  resolution=None,
@@ -11,9 +12,10 @@ class DesignSpace:
                  z_resolution=0,
                  x_bounds=None,
                  y_bounds=None,
-                 z_bounds=None):
+                 z_bounds=None,
+                 create_grid=False):
         if resolution is None:
-            resolution=200
+            resolution = 200
         if x_bounds is None:
             x_bounds = [-1.1, 1.1]
         if y_bounds is None:
@@ -38,58 +40,65 @@ class DesignSpace:
         self.z_lower = min(self.z_bounds)
         self.z_upper = max(self.z_bounds)
 
-        offset = 0.1
+        self.create_grids = create_grid
 
         if self.x_resolution == 0:
 
-            self.X, self.x_step = np.linspace(self.x_lower - offset,
-                                         self.x_upper + offset,
-                                         resolution,
-                                         retstep=True,
-                                         dtype=DesignSpace.DATA_TYPE)
-            self.Y, self.y_step = np.linspace(self.y_lower - offset,
-                                         self.y_upper + offset,
-                                         resolution,
-                                         retstep=True,
-                                         dtype=DesignSpace.DATA_TYPE)
-            self.Z, self.z_step = np.linspace(self.z_lower - offset,
-                                         self.z_upper + offset,
-                                         resolution,
-                                         retstep=True,
-                                         dtype=DesignSpace.DATA_TYPE)
+            self.X, self.x_step = np.linspace(self.x_lower - self.OFFSET,
+                                              self.x_upper + self.OFFSET,
+                                              resolution,
+                                              retstep=True,
+                                              dtype=DesignSpace.DATA_TYPE)
+            self.Y, self.y_step = np.linspace(self.y_lower - self.OFFSET,
+                                              self.y_upper + self.OFFSET,
+                                              resolution,
+                                              retstep=True,
+                                              dtype=DesignSpace.DATA_TYPE)
+            self.Z, self.z_step = np.linspace(self.z_lower - self.OFFSET,
+                                              self.z_upper + self.OFFSET,
+                                              resolution,
+                                              retstep=True,
+                                              dtype=DesignSpace.DATA_TYPE)
 
         else:
 
-            self.X, self.x_step = np.linspace(self.x_lower - offset,
-                                         self.x_upper + offset,
-                                         x_resolution,
-                                         retstep=True,
-                                         dtype=DesignSpace.DATA_TYPE)
-            self.Y, self.y_step = np.linspace(self.y_lower - offset,
-                                         self.y_upper + offset,
-                                         y_resolution,
-                                         retstep=True,
-                                         dtype=DesignSpace.DATA_TYPE)
-            self.Z, self.z_step = np.linspace(self.z_lower - offset,
-                                         self.z_upper + offset,
-                                         z_resolution,
-                                         retstep=True,
-                                         dtype=DesignSpace.DATA_TYPE)
+            self.X, self.x_step = np.linspace(self.x_lower - self.OFFSET,
+                                              self.x_upper + self.OFFSET,
+                                              x_resolution,
+                                              retstep=True,
+                                              dtype=DesignSpace.DATA_TYPE)
+            self.Y, self.y_step = np.linspace(self.y_lower - self.OFFSET,
+                                              self.y_upper + self.OFFSET,
+                                              y_resolution,
+                                              retstep=True,
+                                              dtype=DesignSpace.DATA_TYPE)
+            self.Z, self.z_step = np.linspace(self.z_lower - self.OFFSET,
+                                              self.z_upper + self.OFFSET,
+                                              z_resolution,
+                                              retstep=True,
+                                              dtype=DesignSpace.DATA_TYPE)
 
         print('Generating Sample Grid in Design Space')
 
-        self.x_grid, self.y_grid, self.z_grid = np.meshgrid(self.X,
-                                                            self.Y,
-                                                            self.Z,
-                                                            indexing='ij')
+        if self.create_grids is True:
 
-        if self.x_resolution == 0:
-            self.coordinate_list = np.empty(
-                (self.resolution * self.resolution * self.resolution, 3), dtype=np.float32)
+            self.x_grid, self.y_grid, self.z_grid = np.meshgrid(self.X,
+                                                                self.Y,
+                                                                self.Z,
+                                                                indexing='ij', copy=True)
+
+            if self.x_resolution == 0:
+                self.coordinate_list = np.empty(
+                    (self.resolution * self.resolution * self.resolution, 3), dtype=np.float32)
+
+            else:
+                self.coordinate_list = np.empty(
+                    (self.x_resolution * self.y_resolution * self.z_resolution, 3), dtype=np.float32)
+            self.coordinate_list[:, 0] = self.x_grid.flatten()
+            self.coordinate_list[:, 1] = self.y_grid.flatten()
+            self.coordinate_list[:, 2] = self.z_grid.flatten()
 
         else:
-            self.coordinate_list = np.empty(
-                (self.x_resolution * self.y_resolution * self.z_resolution, 3), dtype=np.float32)
-        self.coordinate_list[:, 0] = self.x_grid.flatten()
-        self.coordinate_list[:, 1] = self.y_grid.flatten()
-        self.coordinate_list[:, 2] = self.z_grid.flatten()
+            self.x_grid = None
+            self.y_grid = None
+            self.z_grid = None
