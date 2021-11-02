@@ -22,7 +22,8 @@ class PointCloud:
         self.points[:, 2] = self.points[:, 2] * self.zScale + min(self.shape.z_limits)
 
         if self.shape is not None:
-            point_values = self.shape.evaluate_point(self.points[:, 0], self.points[:, 1], self.points[:, 2])
+            point_values = self.shape.evaluate_point(self.points[:, 0], self.points[:, 1], self.points[:, 2],
+                                                     broadcasting=False)
             mask = np.ma.masked_array(point_values <= 0)
             self.points = self.points[mask, :]
 
