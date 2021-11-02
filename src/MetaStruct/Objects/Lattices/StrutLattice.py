@@ -1,29 +1,37 @@
 import cProfile
 import io
 import pstats
+import time
 
+import numba
 import numexpr as ne
 import numpy as np
 import scipy
 from sklearn.neighbors import NearestNeighbors
+from numba import jit, njit
 
 from MetaStruct.Objects.Shapes.Shape import Shape
 
+from line_profiler_pycharm import profile
 
-def profile(func):
-    def wrapper(*args, **kwargs):
-        pr = cProfile.Profile()
-        pr.enable()
-        retval = func(*args, **kwargs)
-        pr.disable()
-        s = io.StringIO()
-        sortby = 'tottime'
-        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-        ps.print_stats()
-        print(s.getvalue())
-        return retval
 
-    return wrapper
+# def profile(func):
+#     def wrapper(*args, **kwargs):
+#         pr = cProfile.Profile()
+#         pr.enable()
+#         retval = func(*args, **kwargs)
+#         pr.disable()
+#         s = io.StringIO()
+#         sortby = 'tottime'
+#         ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+#         ps.print_stats()
+#         print(s.getvalue())
+#         return retval
+#
+#     return wrapper
+
+def old_norm(vector):
+    return np.linalg.norm(vector, axis=0)
 
 
 class StrutLattice(Shape):
@@ -42,6 +50,10 @@ class StrutLattice(Shape):
 
     @profile
     def generate_lattice(self):
+        """
+        This function is used to avoid instantiating many lines and doing boolean ops as its super slow.
+        Want to vectorise using numpy ideally...
+        """
 
         data_type = self.design_space.DATA_TYPE
 
@@ -53,47 +65,55 @@ class StrutLattice(Shape):
 
         vec = np.array([self.x_grid, self.y_grid, self.z_grid], dtype=data_type)
 
+        vec_bc = np.array([self.design_space.X[:, None, None], self.design_space.Y[None, :, None],
+                           self.design_space.Z[None, None, :]])
+
         ba = self.lines[:, 1, :] - self.lines[:, 0, :]
+
+        baba = np.einsum('ij,ij->i', ba, ba, optimize='greedy')
 
         grid = np.full_like(self.x_grid, np.inf, dtype=data_type)
 
+        times = []
+
         for i, line in enumerate(self.lines[:, 0, :]):
+            start = time.time()
 
-            pa = vec - line[:, np.newaxis, np.newaxis, np.newaxis]
+            # Wanna avoid this line (slow)
+            pa = vec - line[:, None, None, None]
 
-            paba = np.einsum('ijkl,i->jkl', pa, ba[i], dtype=data_type)
+            # Need to find a way to use this
+            pa_bc = vec_bc - line
 
-            baba = np.dot(ba[i], ba[i])
+            paba = np.dot(pa_bc, ba[i])
 
-            h = np.clip(paba/baba, 0, 1)
+            h = np.clip(paba/baba[i], 0, 1)
 
-            ba_h = ba[i][:, None, None, None]*h
+            ba_h = ba[i][:, None, None, None] * h
 
-            out = np.linalg.norm(pa-ba_h, axis=0)-self.r
+            # Need to replace this implementation to use 'pa_bc' instead...
+            pa_ba_h = ne.evaluate('pa-ba_h', local_dict={'pa': pa, 'ba_h': ba_h})
 
-            if i == 0:
+            # Can this norm be made faster?
+            out = old_norm(pa_ba_h) - self.r
 
-                if self.blend == 0:
+            if self.blend == 0:
 
-                    grid = ne.evaluate('where(grid<out, grid, out)', casting='same_kind')
-
-                else:
-
-                    grid = ne.evaluate(
-                        '-log(where((exp(-b*out) + exp(-b*grid))>0.000, exp(-b*out) + exp(-b*grid), 0.000))/b',
-                        local_dict={'b': self.blend, 'grid': grid, 'out': out}, casting='same_kind')
+                grid = ne.evaluate('where(grid<out, grid, out)', casting='same_kind')
 
             else:
 
-                if self.blend == 0:
+                grid = ne.evaluate(
+                    '-log(where((exp(-b*out) + exp(-b*grid))>0.000, exp(-b*out) + exp(-b*grid), 0.000))/b',
+                    local_dict={'b': self.blend, 'grid': grid, 'out': out}, casting='same_kind')
 
-                    grid = ne.re_evaluate(local_dict={'grid': grid, 'out': out})
-
-                else:
-
-                    grid = ne.re_evaluate(local_dict={'b': self.blend, 'grid': grid, 'out': out})
+            end = time.time()
+            times.append(end - start)
 
         self.evaluated_grid = grid
+
+        print(np.mean(np.array(times)))
+        print(times)
 
         return
 
@@ -231,13 +251,13 @@ class VoronoiLattice(StrutLattice):
 
             for i, point in enumerate(region):
 
-                if i == len(region)-1:
+                if i == len(region) - 1:
 
                     self.lines.append(tuple([point, region[0]]))
 
                 else:
 
-                    self.lines.append(tuple([point, region[i+1]]))
+                    self.lines.append(tuple([point, region[i + 1]]))
 
         self.lines = [list(line) for line in set(self.lines)]
         self.lines = [[self.voronoi.vertices[line[0]], self.voronoi.vertices[line[1]]] for line in self.lines]
