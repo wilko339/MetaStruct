@@ -23,16 +23,16 @@ def profile(func):
         return retval
     return wrapper
 
-#@profile
+@profile
 def voro_test():
-    ds = DesignSpace(150)
-    region = Cube(ds)
+    ds = DesignSpace(100, create_grid=True)
+    region = Sphere(ds)
 
-    points = LHSPoints(40, region)
+    points = RandomPoints(40, region, seed=1)
 
     lat = VoronoiLattice(ds, points, r=0.03)
 
-    lat.preview_model()
+    #lat.preview_model()
 
 if __name__ == "__main__":
     voro_test()
