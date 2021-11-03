@@ -55,6 +55,8 @@ class StrutLattice(Shape):
         Want to vectorise using numpy ideally...
         """
 
+        assert self.design_space.create_grids is True, 'create_grids must be true in the design space'
+
         data_type = self.design_space.DATA_TYPE
 
         self.n_lines = len(self.lines)
@@ -65,6 +67,7 @@ class StrutLattice(Shape):
 
         vec = np.array([self.x_grid, self.y_grid, self.z_grid], dtype=data_type)
 
+        # Is there a way to avoid the ragged nested sequences error?
         vec_bc = np.array([self.design_space.X[:, None, None], self.design_space.Y[None, :, None],
                            self.design_space.Z[None, None, :]])
 
@@ -73,8 +76,6 @@ class StrutLattice(Shape):
         baba = np.einsum('ij,ij->i', ba, ba, optimize='greedy')
 
         grid = np.full_like(self.x_grid, np.inf, dtype=data_type)
-
-        times = []
 
         for i, line in enumerate(self.lines[:, 0, :]):
             start = time.time()
@@ -107,13 +108,7 @@ class StrutLattice(Shape):
                     '-log(where((exp(-b*out) + exp(-b*grid))>0.000, exp(-b*out) + exp(-b*grid), 0.000))/b',
                     local_dict={'b': self.blend, 'grid': grid, 'out': out}, casting='same_kind')
 
-            end = time.time()
-            times.append(end - start)
-
         self.evaluated_grid = grid
-
-        print(np.mean(np.array(times)))
-        print(times)
 
         return
 
