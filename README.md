@@ -2,6 +2,10 @@
 
 A Python project for open-source CAD design using implicit equations (or FREP, volumetric geometry).
 
+# This Branch
+
+This is an area for me to investigate using cython compiled code to speed up various parts of the code. 
+
 # License
 
 This project is licensed under the MIT license. 
