@@ -84,14 +84,14 @@ class Geometry:
         if self.design_space.create_grids is True:
 
             self.evaluated_grid = np.array(
-                self.evaluate_point(self.x_grid, self.y_grid, self.z_grid))
+                self.evaluate_point(self.x_grid, self.y_grid, self.z_grid, broadcasting=False))
             if gradients is True:
                 self.gradient_grid = np.gradient(
                     self.evaluated_grid, self.design_space.resolution)
 
         else:
             self.evaluated_grid = np.array(
-                self.evaluate_point(self.design_space.X, self.design_space.Y, self.design_space.Z)
+                self.evaluate_point(self.design_space.X, self.design_space.Y, self.design_space.Z, broadcasting=True)
             )
 
     def find_surface(self, level=0):
