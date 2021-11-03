@@ -1,4 +1,6 @@
 import math
+from MetaStruct.Objects.Shapes.Sphere import Sphere
+from MetaStruct.Objects.Shapes.Shape import Shape
 
 import numpy as np
 from smt.sampling_methods import LHS, FullFactorial
@@ -6,20 +8,22 @@ from smt.sampling_methods import LHS, FullFactorial
 
 class PointCloud:
 
-    def __init__(self, n_points, shape=None, points=None):
+    def __init__(self, design_space=None, n_points=None, shape=None, points=None):
         self.n_points = n_points
         self.points = points
 
         self.shape = shape
 
-        self.xScale = max(self.shape.x_limits) - min(self.shape.x_limits)
-        self.yScale = max(self.shape.y_limits) - min(self.shape.y_limits)
-        self.zScale = max(self.shape.z_limits) - min(self.shape.z_limits)
+        self.design_space = design_space
+
+        self.x_scale = max(self.shape.x_limits) - min(self.shape.x_limits)
+        self.y_scale = max(self.shape.y_limits) - min(self.shape.y_limits)
+        self.z_scale = max(self.shape.z_limits) - min(self.shape.z_limits)
 
     def generate_points(self, n_points):
-        self.points[:, 0] = self.points[:, 0] * self.xScale + min(self.shape.x_limits)
-        self.points[:, 1] = self.points[:, 1] * self.yScale + min(self.shape.y_limits)
-        self.points[:, 2] = self.points[:, 2] * self.zScale + min(self.shape.z_limits)
+        self.points[:, 0] = self.points[:, 0] * self.x_scale + min(self.shape.x_limits)
+        self.points[:, 1] = self.points[:, 1] * self.y_scale + min(self.shape.y_limits)
+        self.points[:, 2] = self.points[:, 2] * self.z_scale + min(self.shape.z_limits)
 
         if self.shape is not None:
             point_values = self.shape.evaluate_point(self.points[:, 0], self.points[:, 1], self.points[:, 2],
@@ -31,11 +35,23 @@ class PointCloud:
         points = np.append(self.points, other.points, axis=0)
         return PointCloud(self.n_points, points=points)
 
+    def preview_points(self, r):
+
+        assert self.design_space is not None, 'No design space to display points'
+
+        points = Shape(self.design_space)
+
+        for point in self.points:
+
+            print(point)
+
+            raise
+
 
 class RandomPoints(PointCloud):
 
-    def __init__(self, n_points=50, shape=None, points=None, seed=None):
-        super().__init__(n_points, shape, points)
+    def __init__(self, design_space=None, n_points=50, shape=None, points=None, seed=None):
+        super().__init__(design_space, n_points, shape, points)
         if seed is not None:
             np.random.seed(seed)
         self.points = np.random.rand(n_points, 3)
@@ -44,16 +60,16 @@ class RandomPoints(PointCloud):
 
 class LHSPoints(PointCloud):
 
-    def __init__(self, n_points=50, shape=None, points=None):
-        super().__init__(n_points, shape, points)
+    def __init__(self, design_space=None, n_points=50, shape=None, points=None):
+        super().__init__(design_space, n_points, shape, points)
         self.points = LHS(xlimits=np.array([[0, 1], [0, 1], [0, 1]]))(n_points)
         self.generate_points(self.n_points)
 
 
 class FFPoints(PointCloud):
 
-    def __init__(self, n_points=100, shape=None, points=None):
-        super().__init__(n_points, shape, points)
+    def __init__(self, design_space=None, n_points=100, shape=None, points=None):
+        super().__init__(design_space, n_points, shape, points)
         self.points = FullFactorial(xlimits=np.array([[0, 1], [0, 1], [0, 1]]), clip=True) \
             (n_points)
         self.generate_points(self.n_points)
@@ -61,8 +77,8 @@ class FFPoints(PointCloud):
 
 class PointsOnSphere(PointCloud):
 
-    def __init__(self, n_points=50, sphere=None):
-        super().__init__(n_points, shape=sphere, points=None)
+    def __init__(self, design_space=None, n_points=50, sphere=None):
+        super().__init__(design_space, n_points, shape=sphere, points=None)
         self.radius = self.shape.r
 
         self.xBounds = self.shape.design_space.x_bounds
