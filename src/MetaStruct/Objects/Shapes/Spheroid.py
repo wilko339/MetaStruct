@@ -28,9 +28,9 @@ class Spheroid(Shape):
 
         return super().__str__() + f'\nRadii(xr, yr, zr): ({self.xr}, {self.yr}, {self.zr})'
 
-    def evaluate_point(self, x, y, z):
+    def evaluate_point(self, x, y, z, broadcasting=False):
 
-        if self.design_space.create_grids is True:
+        if broadcasting is False:
 
             x0 = self.x
             y0 = self.y

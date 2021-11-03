@@ -22,9 +22,9 @@ class Cube(Cuboid):
     def ne_min(self, a, b):
         return ne.evaluate('where(a<b, a, b)')
 
-    def evaluate_point(self, x, y, z):
+    def evaluate_point(self, x, y, z, broadcasting=False):
 
-        if self.design_space.create_grids is True:
+        if broadcasting is False:
             x0 = self.x
             y0 = self.y
             z0 = self.z
