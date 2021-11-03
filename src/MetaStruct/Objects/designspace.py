@@ -13,7 +13,7 @@ class DesignSpace:
                  x_bounds=None,
                  y_bounds=None,
                  z_bounds=None,
-                 create_grid=False):
+                 create_grids=False):
         if resolution is None:
             resolution = 200
         if x_bounds is None:
@@ -40,7 +40,7 @@ class DesignSpace:
         self.z_lower = min(self.z_bounds)
         self.z_upper = max(self.z_bounds)
 
-        self.create_grids = create_grid
+        self.create_grids = create_grids
 
         if self.x_resolution == 0:
 
