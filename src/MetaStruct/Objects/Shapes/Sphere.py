@@ -29,17 +29,6 @@ class Sphere(Spheroid):
 
         else:
 
-            print('Broadcasting...')
-
-            # return ne.evaluate('sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2) -r', local_dict={'x0': self.x,
-            #                                                                              'y0': self.y,
-            #                                                                              'z0': self.z,
-            #                                                                              'r': self.r,
-            #                                                                              'x': x[:, None, None],
-            #                                                                              'y': y[None, :, None],
-            #                                                                              'z': z[None, None, :]
-            #                                                                              })
-
             return np.sqrt(
                 (x[:, None, None] - self.x) ** 2 + (y[None, :, None] - self.y) ** 2 + (z[None, None, :] - self.z) ** 2) \
                    - self.r
