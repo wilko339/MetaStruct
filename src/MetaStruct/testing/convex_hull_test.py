@@ -5,10 +5,12 @@ from MetaStruct.Objects.Lattices.StrutLattice import *
 
 
 def convex_test():
-    ds = DesignSpace(150)
+    ds = DesignSpace(150, create_grids=True)
     shape = Sphere(ds)
 
-    points = RandomPoints(50, shape, seed=1)
+    points = PointsOnSphere(n_points=50, sphere=shape)
+
+    #points.preview_points()
 
     lat = ConvexHullLattice(ds, points, r=0.05)
 
