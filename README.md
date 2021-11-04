@@ -4,7 +4,7 @@ A Python project for open-source CAD design using implicit equations (or FREP, v
 
 # This Branch
 
-This is an area for general development and testing. Currently, I'm trying to get away from generating the whole evaluation grid initially (using meshgrid) and instead take advantage of Numpy broadcasting to make execution faster and use less memory. 
+This is a branch of the development branch, looking to integrate some Cython speed improvements where possible.s
 
 # License
 
