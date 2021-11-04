@@ -8,7 +8,7 @@ from smt.sampling_methods import LHS, FullFactorial
 
 class PointCloud:
 
-    def __init__(self, design_space=None, n_points=None, shape=None, points=None):
+    def __init__(self, n_points=None, shape=None, points=None, design_space=None,):
         self.n_points = n_points
         self.points = points
 
@@ -51,7 +51,7 @@ class PointCloud:
 class RandomPoints(PointCloud):
 
     def __init__(self, design_space=None, n_points=50, shape=None, points=None, seed=None):
-        super().__init__(design_space, n_points, shape, points)
+        super().__init__(design_space=design_space, n_points=n_points, shape=shape, points=points)
         if seed is not None:
             np.random.seed(seed)
         self.points = np.random.rand(n_points, 3)
