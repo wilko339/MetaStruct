@@ -25,10 +25,10 @@ def profile(func):
 
 @profile
 def voro_test():
-    ds = DesignSpace(100, create_grid=True)
+    ds = DesignSpace(100, create_grids=True)
     region = Sphere(ds)
 
-    points = RandomPoints(40, region, seed=1)
+    points = RandomPoints(n_points=40, shape=region, seed=1)
 
     lat = VoronoiLattice(ds, points, r=0.03)
 
