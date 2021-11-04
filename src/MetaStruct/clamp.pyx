@@ -10,7 +10,7 @@ cdef float clip(float a, float min_value, float max_value) nogil:
 cimport cython
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def compute(float[:, :, :] array, float a, float b):
+def compute(float[:, :, ::1] array, float a, float b):
 
     cdef Py_ssize_t x_max = array.shape[0]
     cdef Py_ssize_t y_max = array.shape[1]
