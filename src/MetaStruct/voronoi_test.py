@@ -10,14 +10,13 @@ def voro_test():
 
     points = RandomPoints(50, shape, seed=1)
 
-    lat = VoronoiLattice(ds, points, r=0.05)
+    lat = VoronoiLattice(ds, points, r=0.03) / shape
 
     lat.find_surface()
 
-    lat.decimate_mesh(0.1)
+    lat.decimate_mesh(0.2)
 
     lat.preview_model()
-
 
 if __name__ == "__main__":
     voro_test()
