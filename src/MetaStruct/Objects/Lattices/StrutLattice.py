@@ -10,21 +10,25 @@ from sklearn.neighbors import NearestNeighbors
 from MetaStruct.Objects.Shapes.Line import Line
 from MetaStruct.Objects.Shapes.Shape import Shape
 
+from line_profiler_pycharm import profile
 
-def profile(func):
-    def wrapper(*args, **kwargs):
-        pr = cProfile.Profile()
-        pr.enable()
-        retval = func(*args, **kwargs)
-        pr.disable()
-        s = io.StringIO()
-        sortby = 'cumulative'
-        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-        ps.print_stats()
-        print(s.getvalue())
-        return retval
+DATATYPE = np.float32
 
-    return wrapper
+
+# def profile(func):
+#     def wrapper(*args, **kwargs):
+#         pr = cProfile.Profile()
+#         pr.enable()
+#         retval = func(*args, **kwargs)
+#         pr.disable()
+#         s = io.StringIO()
+#         sortby = 'cumulative'
+#         ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+#         ps.print_stats()
+#         print(s.getvalue())
+#         return retval
+#
+#     return wrapper
 
 
 class StrutLattice(Shape):
@@ -226,7 +230,8 @@ class VoronoiLattice(StrutLattice):
                     self.lines.append(tuple([point, region[i+1]]))
 
         self.lines = [list(line) for line in set(self.lines)]
-        self.lines = [[self.voronoi.vertices[line[0]], self.voronoi.vertices[line[1]]] for line in self.lines]
+        self.lines = np.array([[self.voronoi.vertices[line[0]], self.voronoi.vertices[line[1]]] for line in self.lines],
+                              dtype=np.float32)
 
         self.generate_lattice()
 
@@ -278,10 +283,3 @@ class RegularStrutLattice(StrutLattice):
         self.generate_lattice()
 
 
-def clamp(n, a, b):
-    if n < a:
-        return a
-    elif n > b:
-        return b
-    else:
-        return n
