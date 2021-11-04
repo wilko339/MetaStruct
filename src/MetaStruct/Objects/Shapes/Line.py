@@ -5,8 +5,12 @@ from numpy.linalg import norm
 from MetaStruct.Objects.Misc.Vector import Vector
 from MetaStruct.Objects.Shapes.Shape import Shape
 
+from MetaStruct.clamp import compute
 
-def clamp(num, a, b):
+from line_profiler_pycharm import profile
+
+
+def clamp_old(num, a, b):
 
     return ne.evaluate('where(where(num<b, num, b)>a, where(num<b, num, b), a)')
 
@@ -29,6 +33,7 @@ class Line(Shape):
         self.y_limits = np.array(([min(p1[1], p2[1]) - r, max(p1[1], p2[1]) + r]), dtype=self.design_space.DATA_TYPE)
         self.z_limits = np.array(([min(p1[2], p2[2]) - r, max(p1[2], p2[2]) + r]), dtype=self.design_space.DATA_TYPE)
 
+    @profile
     def evaluate_point(self, x, y, z):
 
         pa = Vector([x, y, z]) - self.p1
@@ -41,7 +46,11 @@ class Line(Shape):
         paba = pa*ba
         baba = ba*ba
 
-        h = clamp(ne.evaluate('(paba)/(baba)'), 0.0, 1.0)
+        data = ne.evaluate('(paba)/(baba)')
+
+        #h_old = clamp_old(data, 0.0, 1.0)
+        #h_np = np.clip(data, 0.0, 1.0)
+        h = compute(data, 0.0, 1.0)
 
         baxh = ne.evaluate('ba*h', local_dict={'ba': bax, 'h': h})
         bayh = ne.re_evaluate({'ba': bay, 'h': h})
