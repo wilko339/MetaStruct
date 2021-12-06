@@ -19,11 +19,11 @@ class Torus(Shape):
 
     def set_limits(self):
 
-        self.xLims = np.array(
+        self.x_limits = np.array(
             [self.x - self.r1 - self.r2, self.x + self.r1 + self.r2])
-        self.yLims = np.array(
+        self.y_limits = np.array(
             [self.y - self.r1 - self.r2, self.y + self.r1 + self.r2])
-        self.zLims = np.array(
+        self.z_limits = np.array(
             [self.z - self.r2, self.z + self.r2])
 
     def evaluate_point(self, x, y, z):
