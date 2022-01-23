@@ -20,7 +20,7 @@ Navigate into the root directory of the repository and pip install locally in de
 
 Use conda to install libigl python bindings:
 
-    conda install igl
+    conda install -c conda-forge igl
 
 There are a few quick ways to check if things are working (until proper tests are written...)
 
