@@ -6,6 +6,7 @@ import numexpr as ne
 import numpy as np
 import scipy
 from sklearn.neighbors import NearestNeighbors
+import pandas as pd
 
 from MetaStruct.Objects.Shapes.Line import Line
 from MetaStruct.Objects.Shapes.Shape import Shape
@@ -46,8 +47,10 @@ class StrutLattice(Shape):
         self.n_lines = len(self.lines)
 
         try:
-
-            initial_line = Line(self.design_space, self.lines[0][0], self.lines[0][1], r=self.r)
+            if len(self.r) == 1:
+                initial_line = Line(self.design_space, self.lines[0][0], self.lines[0][1], r=self.r)
+            else:
+                initial_line = Line(self.design_space, self.lines[0][0], self.lines[0][1], r=self.r[0])
 
         except IndexError:
 
@@ -62,11 +65,15 @@ class StrutLattice(Shape):
         self.evaluated_grid = initial_line.evaluated_grid
 
         for i in range(1, len(self.lines)):
-            self.evaluated_grid = next(self.new_grid(self.lines[i]))
+            self.evaluated_grid = next(self.new_grid(self.lines[i], i))
 
-    def new_grid(self, line):
+    def new_grid(self, line, idx):
 
-        line = Line(self.design_space, line[0], line[1], r=self.r)
+        if len(self.r) == 1:
+            line = Line(self.design_space, line[0], line[1], r=self.r)
+
+        else:
+            line = Line(self.design_space, line[0], line[1], r=self.r[idx])
 
         line.evaluate_grid(verbose=False)
 
@@ -276,6 +283,77 @@ class RegularStrutLattice(StrutLattice):
             self.lines.append([p1, p2])
 
         self.generate_lattice()
+
+
+class OptimisationLattice(StrutLattice):
+
+    def __init__(self, design_space, data, cell_size=10, scale_factor=0.5):
+        super().__init__(design_space)
+        self.size = scale_factor
+        self.cell_size = cell_size
+        self.data = import_optimisation_data(data)
+
+        self.x_limits = [-1, 1]
+        self.y_limits = [-1, 1]
+        self.z_limits = [-1, 1]
+
+        self.create_struts()
+
+    def create_struts(self):
+
+        struts = []
+        strut_radii = []
+
+        for idx, row in self.data.iterrows():
+            x = row['x'] * self.cell_size
+            y = row['y'] * self.cell_size
+            z = row['z'] * self.cell_size
+            r1 = row['r1'] * self.size
+            r2 = row['r2'] * self.size
+            r3 = row['r3'] * self.size
+            r4 = row['r4'] * self.size
+            r5 = row['r5'] * self.size
+            r6 = row['r6'] * self.size
+            r7 = row['r7'] * self.size
+
+            line1 = [[x - self.size / 2, y - self.size / 2, z + self.size / 2],
+                     [x + self.size / 2, y + self.size / 2, z - self.size / 2], r1]
+
+            line2 = [[x - self.size / 2, y + self.size / 2, z + self.size / 2],
+                     [x + self.size / 2, y - self.size / 2, z - self.size / 2], r2]
+
+            line3 = [[x - self.size / 2, y + self.size / 2, z - self.size / 2],
+                     [x + self.size / 2, y - self.size / 2, z + self.size / 2], r3]
+
+            line4 = [[x - self.size / 2, y - self.size / 2, z - self.size / 2],
+                     [x + self.size / 2, y + self.size / 2, z + self.size / 2], r4]
+
+            line5 = [[x - self.size / 2, y, z],
+                     [x + self.size / 2, y, z], r5]
+
+            line6 = [[x, y - self.size / 2, z],
+                     [x, y + self.size / 2, z], r6]
+
+            line7 = [[x, y, z - self.size / 2],
+                     [x, y, z + self.size / 2], r7]
+
+            for line in [line1, line2, line3, line4, line5, line6, line7]:
+                if line[2] > 0:
+                    struts.append([line[0], line[1]])
+                    strut_radii.append(line[2])
+
+        self.lines = struts
+        self.r = strut_radii
+        self.generate_lattice()
+
+
+def import_optimisation_data(path):
+    data = pd.read_csv(path, nrows=100, header=None)
+    data.columns = ['x', 'y', 'z', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7']
+    data = data.drop(data[(data.r1 == 0) & (data.r2 == 0) & (data.r3 == 0) & (data.r4 == 0) & (data.r5 == 0) &
+                          (data.r6 == 0) & (data.r7 == 0)].index)
+
+    return data
 
 
 def clamp(n, a, b):
