@@ -2,6 +2,8 @@
 
 A Python project for open-source CAD design using implicit equations (or FREP, volumetric geometry).
 
+This branch is for the development of code to import data about an optimised lattice structure. 
+
 # License
 
 This project is licensed under the MIT license. 
