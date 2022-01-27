@@ -5,6 +5,8 @@ from numpy.linalg import norm
 from MetaStruct.Objects.Misc.Vector import Vector
 from MetaStruct.Objects.Shapes.Shape import Shape
 
+from line_profiler_pycharm import profile
+
 
 def clamp(num, a, b):
 
@@ -29,6 +31,7 @@ class Line(Shape):
         self.y_limits = np.array(([min(p1[1], p2[1]) - r, max(p1[1], p2[1]) + r]), dtype=self.design_space.DATA_TYPE)
         self.z_limits = np.array(([min(p1[2], p2[2]) - r, max(p1[2], p2[2]) + r]), dtype=self.design_space.DATA_TYPE)
 
+    @profile
     def evaluate_point(self, x, y, z):
 
         pa = Vector([x, y, z]) - self.p1
@@ -48,3 +51,46 @@ class Line(Shape):
         bazh = ne.re_evaluate({'ba': baz, 'h': h})
 
         return norm(pa-Vector([baxh, bayh, bazh])) - self.r
+
+class SimpleLine(Line):
+
+    def __init__(self, design_space, p=None, l=1, r=0.25, ax='x'):
+
+        if p == None:
+            p =[0, 0, 0]
+
+        p1 = [p[0]-l/2, p[1], p[2]]
+        p2 = [p[0]+l/2, p[1], p[2]]
+
+        self.centre = np.array(p)
+
+        self.length = l
+        self.ax = ax
+
+        super().__init__(design_space, p1, p2, r)
+
+    @profile
+    def evaluate_point(self, x, y, z):
+
+        clip = np.empty_like(x, dtype=self.design_space.DATA_TYPE)
+
+        if self.ax == 'x':
+
+            np.clip(x-self.centre[0], -self.length/2, self.length/2, out=clip)
+
+            return np.linalg.norm(np.array([x-self.centre[0]-clip, y-self.centre[1], z-self.centre[2]],
+                                           dtype=self.design_space.DATA_TYPE), axis=0) - self.r
+
+        if self.ax == 'y':
+
+            np.clip(y-self.centre[1], -self.length/2, self.length/2, out=clip)
+
+            return np.linalg.norm(np.array([x-self.centre[0], y-self.centre[1]-clip, z-self.centre[2]],
+                                           dtype=self.design_space.DATA_TYPE), axis=0) - self.r
+
+        if self.ax == 'z':
+
+            np.clip(z-self.centre[2], -self.length/2, self.length/2, out=clip)
+
+            return np.linalg.norm(np.array([x-self.centre[0], y-self.centre[1], z-self.centre[2]-clip],
+                                           dtype=self.design_space.DATA_TYPE), axis=0) - self.r
