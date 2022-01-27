@@ -3,11 +3,10 @@ from MetaStruct.Objects.Lattices.StrutLattice import OptimisationLattice
 
 
 def main():
-    ds = DesignSpace(resolution=200, x_bounds=[-0.1, 10.1], y_bounds=[-0.1, 10.1], z_bounds=[-0.1, 10.1])
+    ds = DesignSpace(resolution=150, x_bounds=[-1, 11], y_bounds=[-1, 11], z_bounds=[-1, 11])
     lattice = OptimisationLattice(ds, 'AM_Cube_LB007_BD_X_B_100.csv')
 
     lattice.preview_model()
-
 
 if __name__ == '__main__':
     main()
