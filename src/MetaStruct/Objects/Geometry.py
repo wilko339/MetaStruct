@@ -305,3 +305,11 @@ class Geometry:
 
         self.evaluated_grid = self.evaluate_point(
             self.x_grid, self.y_grid, self.z_grid)
+
+    def shell(self, thickness=0.5):
+
+        print('Warning - Shell - This operation will only function correctly for objects with euclidean distance sdfs.'
+              'TPMS lattices do not have euclidean distance sdfs, so the result is unpredictable.')
+
+        ne.evaluate('abs(grid+t)-t/2', local_dict={'grid': self.evaluated_grid, 't': thickness},
+                    out=self.evaluated_grid, casting='same_kind')
