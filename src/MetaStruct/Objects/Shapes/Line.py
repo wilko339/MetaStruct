@@ -56,8 +56,8 @@ class SimpleLine(Line):
 
     def __init__(self, design_space, p=None, l=1, r=0.25, ax='x'):
 
-        if p == None:
-            p =[0, 0, 0]
+        if p is None:
+            p = [0, 0, 0]
 
         p1 = [p[0]-l/2, p[1], p[2]]
         p2 = [p[0]+l/2, p[1], p[2]]
