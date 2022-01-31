@@ -3,6 +3,7 @@ import numexpr as ne
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from skimage import measure
+from line_profiler_pycharm import profile
 
 from MetaStruct.Functions.Remap import remap
 
@@ -68,7 +69,7 @@ class Geometry:
 
     def evaluate_point(self, x, y, z):
 
-        pass
+        return
 
     def translate(self, x, y, z):
 
@@ -87,6 +88,8 @@ class Geometry:
             self.gradient_grid = np.gradient(
                 self.evaluated_grid, self.design_space.resolution)
 
+        return
+
     def find_surface(self, level=0):
 
         print(f'Extracting Isosurface (level = {level})...')
@@ -96,10 +99,11 @@ class Geometry:
 
         try:
 
-            self.vertices, self.faces, self.normals, self.values = measure.marching_cubes(self.evaluated_grid, level=level,
+            self.vertices, self.faces, self.normals, self.values = measure.marching_cubes(self.evaluated_grid,
+                                                                                          level=level,
                                                                                           spacing=(
-                                                                                           self.x_step, self.y_step,
-                                                                                           self.z_step),
+                                                                                              self.x_step, self.y_step,
+                                                                                              self.z_step),
                                                                                           allow_degenerate=False)
 
         except ValueError:
@@ -166,7 +170,8 @@ class Geometry:
                 self.find_surface(level=level)
 
             ml.triangular_mesh(
-                self.vertices[:, 0], self.vertices[:, 1], self.vertices[:, 2], self.faces, color=tuple(c / 255 for c in rgb))
+                self.vertices[:, 0], self.vertices[:, 1], self.vertices[:, 2], self.faces,
+                color=tuple(c / 255 for c in rgb))
 
         ml.show()
 
@@ -261,8 +266,9 @@ class Geometry:
         self.x_grid = r
         self.y_grid = az
 
-        self.evaluated_grid = self.evaluate_point(
-            self.x_grid, self.y_grid, self.z_grid)
+        self.evaluated_grid = self.evaluate_point(self.x_grid, self.y_grid, self.z_grid)
+
+        return
 
     def convert_to_spherical(self):
 
@@ -275,23 +281,9 @@ class Geometry:
             'arctan2(sqrt(x_grid**2 + y_grid**2),z_grid)')
         self.z_grid = ne.evaluate('arctan2(y_grid,x_grid)')
 
-        self.evaluated_grid = self.evaluate_point(
-            self.x_grid, self.y_grid, self.z_grid)
+        self.evaluated_grid = self.evaluate_point(self.x_grid, self.y_grid, self.z_grid)
 
-    def transform_test(self, fac=10):
-
-        pi = np.pi
-        x = remap(self.x_grid)
-        y = remap(self.y_grid)
-        z = remap(self.z_grid)
-        k = fac
-
-        r = R.from_quat([1, -1, 1, 1])
-
-        self.x_grid = r.apply(x)
-
-        self.evaluated_grid = self.evaluate_point(
-            self.x_grid, self.y_grid, self.z_grid)
+        return
 
     def pringle(self, pringle_factor=0.1):
 
@@ -303,8 +295,9 @@ class Geometry:
 
         self.z_grid = ne.evaluate('z + 0.1*(x**2 - y**2)')
 
-        self.evaluated_grid = self.evaluate_point(
-            self.x_grid, self.y_grid, self.z_grid)
+        self.evaluated_grid = self.evaluate_point(self.x_grid, self.y_grid, self.z_grid)
+
+        return
 
     def shell(self, thickness=0.5):
 
@@ -313,3 +306,48 @@ class Geometry:
 
         ne.evaluate('abs(grid+t/2)-t/2', local_dict={'grid': self.evaluated_grid, 't': thickness},
                     out=self.evaluated_grid, casting='same_kind')
+
+    @profile
+    def transform(self, matrix=None):
+
+        rot = np.radians(10)
+
+        if matrix is None:
+            matrix = np.array([[np.cos(rot), -np.sin(rot), 0], [np.sin(rot), np.cos(rot), 0], [0, 0, 1]])
+
+        x = self.design_space.X[:, None, None]
+        y = self.design_space.Y[None, :, None]
+        z = self.design_space.Z[None, None, :]
+
+        points = np.dot(np.linalg.inv(matrix), np.array([x, y, z], dtype=object))
+
+        self.evaluated_grid = self.evaluate_point(points[0], points[1], points[2])
+
+    @profile
+    def vector_rotation(self, target=None, original=None):
+
+        if target is None:
+            target = np.array([1, -1, 1])
+
+        if original is None:
+            original = np.array([0, 0, 1])
+
+        target_norm = np.linalg.norm(target)
+        original_norm = np.linalg.norm(original)
+
+        if target_norm != 0:
+            target = target / target_norm
+        if original_norm != 0:
+            original = original / original_norm
+
+        v = np.cross(original, target)
+
+        s = np.linalg.norm(v)
+
+        c = np.dot(original, target)
+
+        vx = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+
+        r = np.eye(3) + vx + np.dot(vx, vx) * (1 - c) / s ** 2
+
+        self.transform(r)
