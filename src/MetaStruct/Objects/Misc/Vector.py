@@ -27,11 +27,9 @@ def subtract(a, b):
     ax = a.x
     ay = a.y
     az = a.z
-
     bx = b.x
     by = b.y
     bz = b.z
-
     if ax.ndim == 0 and bx.ndim == 0:
         arrx = ax-bx
     if ay.ndim == 0 and by.ndim == 0:
@@ -44,7 +42,6 @@ def subtract(a, b):
         arrx = np.empty(ax.shape, dtype=np.float32)
         arry = np.empty(ay.shape, dtype=np.float32)
         arrz = np.empty(az.shape, dtype=np.float32)
-
         ne.evaluate('a-b', local_dict={'a': ax, 'b': bx}, out=arrx, casting='same_kind')
         ne.evaluate('a-b', local_dict={'a': ay, 'b': by}, out=arry, casting='same_kind')
         ne.evaluate('a-b', local_dict={'a': az, 'b': bz}, out=arrz, casting='same_kind')
@@ -56,7 +53,6 @@ def mult(a, b):
     ax = a.x
     ay = a.y
     az = a.z
-
     bx = b.x
     by = b.y
     bz = b.z
