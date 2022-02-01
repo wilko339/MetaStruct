@@ -28,25 +28,6 @@ class Spheroid(Shape):
 
         return super().__str__() + f'\nRadii(xr, yr, zr): ({self.xr}, {self.yr}, {self.zr})'
 
-    def evaluate_point(self, x, y, z, broadcasting=False):
+    def evaluate_point(self, x, y, z):
 
-        if broadcasting is False:
-
-            x0 = self.x
-            y0 = self.y
-            z0 = self.y
-            xr = self.xr
-            yr = self.yr
-            zr = self.zr
-
-            expr = '((x-x0)**2)/(xr**2) + ((y-y0)**2)/(yr**2) + ((z-z0)**2)/(zr**2) - 1'
-
-            return ne.evaluate(expr)
-
-        else:
-
-            x = x[:, None, None]
-            y = y[None, :, None]
-            z = z[None, None, :]
-
-            return ((x-self.x)**2)/(self.xr**2) + ((y-self.y)**2)/(self.yr**2) + ((z-self.z)**2)/(self.zr**2) - 1
+        return ((x-self.x)**2)/(self.xr**2) + ((y-self.y)**2)/(self.yr**2) + ((z-self.z)**2)/(self.zr**2) - 1

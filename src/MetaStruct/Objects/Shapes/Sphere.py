@@ -15,20 +15,6 @@ class Sphere(Spheroid):
 
         return f'Sphere({self.x}, {self.y}, {self.z}, {self.r})'
 
-    def evaluate_point(self, x, y, z, broadcasting=True):
+    def evaluate_point(self, x, y, z):
 
-        if broadcasting is False:
-
-            x0 = self.x
-            y0 = self.y
-            z0 = self.z
-
-            r = self.r
-
-            return ne.evaluate('sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2) -r')
-
-        else:
-
-            return np.sqrt(
-                (x[:, None, None] - self.x) ** 2 + (y[None, :, None] - self.y) ** 2 + (z[None, None, :] - self.z) ** 2) \
-                   - self.r
+        return np.sqrt((x - self.x) ** 2 + (y - self.y) ** 2 + (z - self.z) ** 2) - self.r

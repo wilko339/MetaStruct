@@ -67,42 +67,14 @@ class Cylinder(Shape):
 
     def evaluate_point(self, x, y, z):
 
-        if self.design_space.create_grids is True:
+        if self.ax == 'z':
 
-            x0 = self.x
-            y0 = self.y
-            z0 = self.z
-            r1 = self.r1
-            r2 = self.r2
-            l = self.l
+            return broadcast_sdf(x, y, z, self.x, self.y, self.z, self.r1, self.r2, self.l)
 
-            circles = {'z': '(x-x0)**2/r1**2 + (y-y0)**2/r2**2 - 1',
-                       'x': '(y-y0)**2/r1**2 + (z-z0)**2/r2**2 - 1',
-                       'y': '(x-x0)**2/r1**2 + (z-z0)**2/r2**2 - 1'}
+        if self.ax == 'x':
 
-            lengths = {'z': '(z-z0)**2 - l**2',
-                       'x': '(x-x0)**2 - l**2',
-                       'y': '(y-y0)**2 - l**2'}
+            return broadcast_sdf(y, z, x, self.y, self.z, self.x, self.r1, self.r2, self.l)
 
-            array1 = ne.evaluate(circles[self.ax])
-            array2 = ne.evaluate(lengths[self.ax])
+        if self.ax == 'y':
 
-            return ne.evaluate('where(array1 > array2, array1, array2)')
-
-        else:
-
-            x = x[:, None, None]
-            y = y[None, :, None]
-            z = z[None, None, :]
-
-            if self.ax == 'z':
-
-                return broadcast_sdf(x, y, z, self.x, self.y, self.z, self.r1, self.r2, self.l)
-
-            if self.ax == 'x':
-
-                return broadcast_sdf(y, z, x, self.y, self.z, self.x, self.r1, self.r2, self.l)
-
-            if self.ax == 'y':
-
-                return broadcast_sdf(x, z, y, self.x, self.z, self.y, self.r1, self.r2, self.l)
+            return broadcast_sdf(x, z, y, self.x, self.z, self.y, self.r1, self.r2, self.l)

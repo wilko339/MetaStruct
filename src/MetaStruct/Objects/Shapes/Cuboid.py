@@ -1,8 +1,6 @@
-import numexpr as ne
 import numpy as np
 
 from MetaStruct.Objects.Shapes.Shape import Shape
-from line_profiler_pycharm import profile
 
 
 class Cuboid(Shape):
@@ -31,37 +29,14 @@ class Cuboid(Shape):
 
     def evaluate_point(self, x, y, z):
 
-        if self.design_space.create_grids is True:
+        x_abs = np.abs(x) - self.xd
+        y_abs = np.abs(y) - self.yd
+        z_abs = np.abs(z) - self.zd
 
-            x0 = self.x
-            y0 = self.y
-            z0 = self.z
-            xd = self.xd
-            yd = self.yd
-            zd = self.zd
+        x_max = np.maximum(x_abs, 0)
+        y_max = np.maximum(y_abs, 0)
+        z_max = np.maximum(z_abs, 0)
 
-            arr1 = ne.evaluate('(x-x0)**2 - xd**2')
-            arr2 = ne.evaluate('(y-y0)**2 - yd**2')
-            arr3 = ne.evaluate('(z-z0)**2 - zd**2')
-
-            max1 = ne.evaluate('where(arr1>arr2, arr1, arr2)')
-
-            return ne.evaluate('where(max1>arr3, max1, arr3)')
-
-        else:
-
-            x = x[:, None, None]
-            y = y[None, :, None]
-            z = z[None, None, :]
-
-            x_abs = np.abs(x) - self.xd
-            y_abs = np.abs(y) - self.yd
-            z_abs = np.abs(z) - self.zd
-
-            x_max = np.maximum(x_abs, 0)
-            y_max = np.maximum(y_abs, 0)
-            z_max = np.maximum(z_abs, 0)
-
-            return np.sqrt(x_max ** 2 + y_max ** 2 + z_max ** 2) + np.minimum(
-                np.maximum(x_abs, np.maximum(y_abs, z_abs)), 0)
+        return np.sqrt(x_max ** 2 + y_max ** 2 + z_max ** 2) + np.minimum(
+            np.maximum(x_abs, np.maximum(y_abs, z_abs)), 0)
 

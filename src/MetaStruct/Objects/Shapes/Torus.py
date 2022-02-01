@@ -28,22 +28,4 @@ class Torus(Shape):
 
     def evaluate_point(self, x, y, z):
 
-        if self.design_space.create_grids is True:
-
-            x0 = self.x
-            y0 = self.y
-            z0 = self.z
-            r1 = self.r1
-            r2 = self.r2
-
-            expr = '(sqrt((x-x0)**2 + (y-y0)**2) - r1)**2 + (z-z0)**2 - r2**2'
-
-            return ne.evaluate(expr)
-
-        else:
-
-            x = x[:, None, None]
-            y = y[None, :, None]
-            z = z[None, None, :]
-
-            return (np.sqrt((x-self.x)**2 + (y-self.y)**2) - self.r1)**2 + (z - self.z)**2 - self.r2**2
+        return (np.sqrt((x-self.x)**2 + (y-self.y)**2) - self.r1)**2 + (z - self.z)**2 - self.r2**2

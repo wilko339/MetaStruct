@@ -1,4 +1,3 @@
-import numexpr as ne
 import numpy as np
 
 from MetaStruct.Objects.Shapes.Cuboid import Cuboid
@@ -16,54 +15,14 @@ class Cube(Cuboid):
     def __str__(self):
         return super().__str__() + f'\nCube Radius: {self.dim}'
 
-    def ne_max(self, a, b):
-        return ne.evaluate('where(a>b, a, b)')
+    def evaluate_point(self, x, y, z):
 
-    def ne_min(self, a, b):
-        return ne.evaluate('where(a<b, a, b)')
+        x_abs = np.abs(x) - self.dim
+        y_abs = np.abs(y) - self.dim
+        z_abs = np.abs(z) - self.dim
 
-    def evaluate_point(self, x, y, z, broadcasting=False):
+        x_max = np.maximum(x_abs, 0)
+        y_max = np.maximum(y_abs, 0)
+        z_max = np.maximum(z_abs, 0)
 
-        if broadcasting is False:
-            x0 = self.x
-            y0 = self.y
-            z0 = self.z
-
-            dim = self.dim
-            round_r = self.round_r
-
-            scale = dim / (dim + round_r)
-
-            x_abs = ne.evaluate('abs((x-x0)/scale)-dim', casting='same_kind')
-            y_abs = ne.re_evaluate({'x': y, 'x0': y0, 'scale': scale, 'dim': dim})
-            z_abs = ne.re_evaluate({'x': z, 'x0': z0, 'scale': scale, 'dim': dim})
-
-            x_max = ne.evaluate('where(x_abs>0.0, x_abs, 0.0)')
-            y_max = ne.re_evaluate(local_dict={'x_abs': y_abs})
-            z_max = ne.re_evaluate(local_dict={'x_abs': z_abs})
-
-            mag = ne.evaluate(
-                'sqrt(((where(x_abs>0.0, x_abs, 0.0))**2+((where(y_abs>0.0, y_abs, 0.0))**2+((where(z_abs>0.0, z_abs, 0.0))**2))))')
-
-            minmax = self.ne_min(self.ne_max(
-                x_abs, self.ne_max(y_abs, z_abs)), 0.0)
-
-            return ne.evaluate('(mag + minmax - round_r)*scale')
-
-        else:
-
-            x = x[:, None, None]
-            y = y[None, :, None]
-            z = z[None, None, :]
-
-            x_abs = np.abs(x) - self.dim
-            y_abs = np.abs(y) - self.dim
-            z_abs = np.abs(z) - self.dim
-
-            x_max = np.maximum(x_abs, 0)
-            y_max = np.maximum(y_abs, 0)
-            z_max = np.maximum(z_abs, 0)
-
-            return np.sqrt(x_max**2 + y_max**2 + z_max**2) + np.minimum(np.maximum(x_abs, np.maximum(y_abs, z_abs)), 0)
-
-
+        return np.sqrt(x_max**2 + y_max**2 + z_max**2) + np.minimum(np.maximum(x_abs, np.maximum(y_abs, z_abs)), 0)
