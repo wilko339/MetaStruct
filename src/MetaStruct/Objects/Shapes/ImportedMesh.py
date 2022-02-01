@@ -30,13 +30,16 @@ class ImportedMesh(Shape):
 
     def calculate_signed_distances(self, vertices, faces):
 
+        if self.design_space.coordinate_list is None:
+            self.design_space.generate_grids()
+
         print('Calculating Signed Distances...')
 
         S, _, _ = igl.signed_distance(
             self.design_space.coordinate_list, vertices, faces)
 
         self.evaluated_grid = S.reshape(
-            self.design_space.resolution, self.design_space.resolution, self.design_space.resolution)
+            self.design_space.resolution[0], self.design_space.resolution[1], self.design_space.resolution[2])
 
     def evaluate_point(self, x, y, z):
 
