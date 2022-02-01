@@ -59,10 +59,7 @@ class DesignSpace:
 
     def generate_grids(self):
 
-        self.x_grid, self.y_grid, self.z_grid = np.meshgrid(self.X,
-                                                            self.Y,
-                                                            self.Z,
-                                                            indexing='ij', copy=True)
+        self.x_grid, self.y_grid, self.z_grid = np.meshgrid(self.X, self.Y,self.Z, indexing='ij', copy=True)
         self.coordinate_list = np.empty(
             (self.resolution[0] * self.resolution[1] * self.resolution[2], 3), dtype=np.float32)
 
