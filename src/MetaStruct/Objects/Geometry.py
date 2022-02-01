@@ -3,6 +3,7 @@ import numexpr as ne
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from skimage import measure
+from line_profiler_pycharm import profile
 
 from MetaStruct.Functions.Remap import remap
 
@@ -81,18 +82,7 @@ class Geometry:
         if verbose is True:
             print(f'Evaluating grid points for {self.name}...')
 
-        if self.design_space.create_grids is True:
-
-            self.evaluated_grid = np.array(
-                self.evaluate_point(self.x_grid, self.y_grid, self.z_grid, broadcasting=False))
-            if gradients is True:
-                self.gradient_grid = np.gradient(
-                    self.evaluated_grid, self.design_space.resolution)
-
-        else:
-            self.evaluated_grid = np.array(
-                self.evaluate_point(self.design_space.X, self.design_space.Y, self.design_space.Z, broadcasting=True)
-            )
+        self.evaluated_grid = self.evaluate_point(self.design_space.X, self.design_space.Y, self.design_space.Z)
 
     def find_surface(self, level=0):
 
@@ -131,33 +121,31 @@ class Geometry:
 
                 if not flip_clip:
                     self.evaluated_grid = np.maximum(
-                        self.evaluated_grid, self.x_grid - clip_value)
+                        self.evaluated_grid, self.design_space.X - clip_value)
 
                 if flip_clip:
                     self.evaluated_grid = np.maximum(
-                        self.evaluated_grid, clip_value - self.x_grid)
+                        self.evaluated_grid, clip_value - self.design_space.X)
 
             if clip == 'y':
 
                 if not flip_clip:
                     self.evaluated_grid = np.maximum(
-                        self.evaluated_grid, self.z_grid - clip_value)
+                        self.evaluated_grid, self.design_space.Z - clip_value)
 
                 if flip_clip:
                     self.evaluated_grid = np.maximum(
-                        self.evaluated_grid, clip_value - self.z_grid)
+                        self.evaluated_grid, clip_value - self.design_space.Z)
 
             if clip == 'z':
 
                 if not flip_clip:
                     self.evaluated_grid = np.maximum(
-                        self.evaluated_grid, self.y_grid - clip_value)
+                        self.evaluated_grid, self.design_space.Y - clip_value)
 
                 if flip_clip:
                     self.evaluated_grid = np.maximum(
-                        self.evaluated_grid, clip_value - self.y_grid)
-
-        # ml.figure(bgcolor=(0, 0, 0))
+                        self.evaluated_grid, clip_value - self.design_space.Y)
 
         if mode == 'volume':
             scalar_field = ml.pipeline.scalar_field(
@@ -256,36 +244,25 @@ class Geometry:
 
         print(f'"{self.filename}" successfully exported.')
 
+    @profile
     def convert_to_cylindrical(self):
 
-        x_grid = self.x_grid
-        y_grid = self.y_grid
-        z_grid = self.z_grid
+        r = np.sqrt(self.design_space.X**2 + self.design_space.Y**2)
+        az = np.arctan2(self.design_space.Y, self.design_space.X)
 
-        r = ne.evaluate('sqrt(x_grid**2 + y_grid**2)')
-        az = ne.evaluate('arctan2(y_grid, x_grid)')
-
-        self.x_grid = r
-        self.y_grid = az
-
-        self.evaluated_grid = self.evaluate_point(
-            self.x_grid, self.y_grid, self.z_grid)
+        self.evaluated_grid = self.evaluate_point(r, az, self.design_space.Z)
 
     def convert_to_spherical(self):
 
-        x_grid = self.x_grid
-        y_grid = self.y_grid
-        z_grid = self.z_grid
+        x = np.sqrt(self.design_space.X**2 + self.design_space.Y**2 + self.design_space.Z**2)
+        y = np.arctan2(np.sqrt(self.design_space.X**2 + self.design_space.Y**2), self.design_space.Z)
+        z = np.arctan2(self.design_space.Z, self.design_space.Y)
 
-        self.x_grid = ne.evaluate('sqrt(x_grid**2 + y_grid**2 + z_grid**2)')
-        self.y_grid = ne.evaluate(
-            'arctan2(sqrt(x_grid**2 + y_grid**2),z_grid)')
-        self.z_grid = ne.evaluate('arctan2(y_grid,x_grid)')
-
-        self.evaluated_grid = self.evaluate_point(
-            self.x_grid, self.y_grid, self.z_grid)
+        self.evaluated_grid = self.evaluate_point(x, y, z)
 
     def transform_test(self, fac=10):
+
+        # TODO: Remove references to x_grid, y_grid, z_grid & replace with .X, .Y, .Z
 
         pi = np.pi
         x = remap(self.x_grid)
@@ -302,13 +279,8 @@ class Geometry:
 
     def pringle(self, pringle_factor=0.1):
 
-        x = self.x_grid
-        y = self.y_grid
-        z = self.z_grid
-        pi = np.pi
-        fac = pringle_factor
+        # TODO: Fix
 
-        self.z_grid = ne.evaluate('z + 0.1*(x**2 - y**2)')
+        self.design_space.Z += pringle_factor * (self.design_space.X**2 - self.design_space.Y**2)
 
-        self.evaluated_grid = self.evaluate_point(
-            self.x_grid, self.y_grid, self.z_grid)
+        self.evaluated_grid = self.evaluate_point(self.design_space.X, self.design_space.Y, self.design_space.Z)
