@@ -1,37 +1,10 @@
-import cProfile
-import io
-import pstats
-import time
-
-import numba
 import numexpr as ne
 import numpy as np
 import scipy
 from sklearn.neighbors import NearestNeighbors
-from numba import jit, njit
 
+from MetaStruct.Objects.Shapes.Line import Line, SimpleLine
 from MetaStruct.Objects.Shapes.Shape import Shape
-
-from line_profiler_pycharm import profile
-
-
-# def profile(func):
-#     def wrapper(*args, **kwargs):
-#         pr = cProfile.Profile()
-#         pr.enable()
-#         retval = func(*args, **kwargs)
-#         pr.disable()
-#         s = io.StringIO()
-#         sortby = 'tottime'
-#         ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-#         ps.print_stats()
-#         print(s.getvalue())
-#         return retval
-#
-#     return wrapper
-
-def old_norm(vector):
-    return np.linalg.norm(vector, axis=0)
 
 
 class StrutLattice(Shape):
@@ -48,14 +21,59 @@ class StrutLattice(Shape):
             self.point_cloud = point_cloud
             self.points = self.point_cloud.points
 
-    @profile
     def generate_lattice(self):
+
+        self.n_lines = len(self.lines)
+
+        try:
+            if len(self.r) == 1:
+                initial_line = Line(self.design_space, self.lines[0][0], self.lines[0][1], r=self.r)
+            else:
+                initial_line = Line(self.design_space, self.lines[0][0], self.lines[0][1], r=self.r[0])
+
+        except IndexError:
+
+            print('No line points found.')
+
+            raise
+
+        print(f'Generating Lattice with {self.n_lines} lines...')
+
+        initial_line.evaluate_grid(verbose=False)
+
+        self.evaluated_grid = initial_line.evaluated_grid
+
+        for i in range(1, len(self.lines)):
+            self.evaluated_grid = next(self.new_grid(self.lines[i], i))
+
+    def new_grid(self, line, idx):
+
+        if len(self.r) == 1:
+            line = Line(self.design_space, line[0], line[1], r=self.r)
+
+        else:
+            line = Line(self.design_space, line[0], line[1], r=self.r[idx])
+
+        line.evaluate_grid(verbose=False)
+
+        line_grid = line.evaluated_grid
+
+        grid = self.evaluated_grid
+
+        if self.blend == 0:
+
+            yield ne.evaluate('where(grid<line_grid, grid, line_grid)')
+
+        else:
+            b = self.blend
+            yield ne.evaluate(
+                '-log(where((exp(-b*line_grid) + exp(-b*grid))>0.000, exp(-b*line_grid) + exp(-b*grid), 0.000))/b')
+
+    def generate_lattice_test(self):
         """
         This function is used to avoid instantiating many lines and doing boolean ops as its super slow.
         Want to vectorise using numpy ideally...
         """
-
-        assert self.design_space.create_grids is True, 'create_grids must be true in the design space'
 
         data_type = self.design_space.DATA_TYPE
 
@@ -78,7 +96,6 @@ class StrutLattice(Shape):
         grid = np.full_like(self.x_grid, np.inf, dtype=data_type)
 
         for i, line in enumerate(self.lines[:, 0, :]):
-            start = time.time()
 
             # Wanna avoid this line (slow)
             pa = vec - line[:, None, None, None]
@@ -86,17 +103,32 @@ class StrutLattice(Shape):
             # Need to find a way to use this
             pa_bc = vec_bc - line
 
+            paba_bc = pa_bc * ba[i]
+
             paba = np.dot(pa_bc, ba[i])
 
-            h = np.clip(paba/baba[i], 0, 1)
+            h = np.empty_like(paba, dtype=data_type)
 
-            ba_h = ba[i][:, None, None, None] * h
+            np.clip(paba / baba[i], 0, 1, out=h)
+
+            # ba_h_ = ba[i][:, None, None, None] * h
+
+            ba_h = ne.evaluate('ba*h', local_dict={'ba': ba[i][:, None, None, None], 'h': h})
+
+            pa_ba_h = np.empty_like(vec, dtype=data_type)
+
+            print(pa_bc, ba_h)
+
+            raise
 
             # Need to replace this implementation to use 'pa_bc' instead...
-            pa_ba_h = ne.evaluate('pa-ba_h', local_dict={'pa': pa, 'ba_h': ba_h})
+            ne.evaluate('pa-ba_h', local_dict={'pa': pa, 'ba_h': ba_h}, out=pa_ba_h)
 
             # Can this norm be made faster?
-            out = old_norm(pa_ba_h) - self.r
+            if len(self.r) == 1:
+                out = old_norm(pa_ba_h) - self.r
+            else:
+                out = old_norm(pa_ba_h) - self.r[i]
 
             if self.blend == 0:
 
@@ -115,8 +147,8 @@ class StrutLattice(Shape):
 
 class RandomLattice(StrutLattice):
 
-    def __init__(self, design_space, point_cloud, num_neighbours=4, radius=None, r=0.02, blend=0):
-        super().__init__(design_space, r, point_cloud, blend)
+    def __init__(self, design_space, point_cloud, num_neighbours=4, radius=None, r=0.02):
+        super().__init__(design_space, r, point_cloud)
 
         self.num_neighbours = num_neighbours
         self.radius = radius
@@ -169,12 +201,12 @@ class RandomLattice(StrutLattice):
 
 class DelaunayLattice(StrutLattice):
 
-    def __init__(self, design_space, point_cloud=None, r=0.02, blend=0):
-        super().__init__(design_space, r, point_cloud, blend)
+    def __init__(self, design_space, point_cloud=None, r=0.02):
+        super().__init__(design_space, r, point_cloud)
 
         self.designSpace = design_space
         self.point_cloud = point_cloud
-        self.delaunay = scipy.spatial.Delaunay(self.point_cloud.points, qhull_options='Qbb Qc Qx')
+        self.delaunay = scipy.spatial.Delaunay(self.point_cloud.points, qhull_options='Qbb Qc Qx QJ')
 
         self.x_limits = self.point_cloud.shape.x_limits
         self.y_limits = self.point_cloud.shape.y_limits
@@ -198,8 +230,8 @@ class DelaunayLattice(StrutLattice):
 
 class ConvexHullLattice(StrutLattice):
 
-    def __init__(self, design_space, point_cloud=None, r=0.02, blend=0):
-        super().__init__(design_space, r, point_cloud, blend)
+    def __init__(self, design_space, point_cloud=None, r=0.02):
+        super().__init__(design_space, r, point_cloud)
 
         self.designSpace = design_space
         self.point_cloud = point_cloud
@@ -307,10 +339,182 @@ class RegularStrutLattice(StrutLattice):
         self.generate_lattice()
 
 
-def clamp(n, a, b):
-    if n < a:
-        return a
-    elif n > b:
-        return b
-    else:
-        return n
+class RepeatingLattice(StrutLattice):
+
+    def __init__(self, design_space, unit_cell=None, x=0, y=0, z=0, period=1, r=0.05):
+        self.design_space = design_space
+        self.period = period
+        self.r = r
+        self.x = x
+        self.y = y
+        self.z = z
+        if unit_cell is None:
+            self.unit_cell = BCCAxial(self.design_space, np.array([self.x, self.y, self.z]), self.r, self.period)
+        else:
+            self.unit_cell = unit_cell
+
+        super().__init__(design_space, self.r)
+
+        self.x_limits = [self.x - self.period / 2, self.x + self.period / 2]
+        self.y_limits = [self.y - self.period / 2, self.y + self.period / 2]
+        self.z_limits = [self.z - self.period / 2, self.z + self.period / 2]
+
+    def evaluate_point(self, x, y, z):
+
+        x = ne.evaluate('((x+0.5*p) % p)-0.5*p', local_dict={'x': x, 'p': self.period})
+        y = ne.re_evaluate(local_dict={'x': y, 'p': self.period})
+        z = ne.re_evaluate(local_dict={'x': z, 'p': self.period})
+
+        return self.unit_cell.evaluate_point(x, y, z)
+
+
+class UnitCell(Shape):
+    def __init__(self, design_space):
+        super().__init__(design_space)
+
+
+class AxialCentric(UnitCell):
+    def __init__(self, design_space, centre=None, r=0.25, cell_size=1):
+        if centre is None:
+            centre = [0, 0, 0]
+        self.centre = centre
+        self.r = r
+        self.cell_size = cell_size
+
+        super().__init__(design_space)
+
+        self.x_limits = [self.centre[0] - self.cell_size / 2, self.centre[0] + self.cell_size / 2]
+        self.y_limits = [self.centre[1] - self.cell_size / 2, self.centre[1] + self.cell_size / 2]
+        self.z_limits = [self.centre[2] - self.cell_size / 2, self.centre[2] + self.cell_size / 2]
+
+        self.lines = []
+        self.unit_cell = None
+
+    def evaluate_point(self, x, y, z):
+
+        for ax in ['x', 'y', 'z']:
+            self.lines.append(SimpleLine(self.design_space, self.centre, self.cell_size, self.r, ax))
+
+        self.unit_cell = self.lines[0] + self.lines[1] + self.lines[2]
+
+        return self.unit_cell.evaluate_point(x, y, z)
+
+
+class OctetTruss(UnitCell):
+    def __init__(self, design_space, centre=None, r=0.25, cell_size=1):
+        if centre is None:
+            centre = [0, 0, 0]
+        self.centre = centre
+        self.r = r
+        self.cell_size = cell_size
+
+        super().__init__(design_space)
+
+        self.x_limits = [self.centre[0] - self.cell_size / 2, self.centre[0] + self.cell_size / 2]
+        self.y_limits = [self.centre[1] - self.cell_size / 2, self.centre[1] + self.cell_size / 2]
+        self.z_limits = [self.centre[2] - self.cell_size / 2, self.centre[2] + self.cell_size / 2]
+
+        self.lines = []
+        self.unit_cell = None
+
+    def evaluate_point(self, x, y, z):
+        points = (np.array([
+            [0, 0, 0],
+            [1, 0, 0],
+            [0, 1, 0],
+            [1, 1, 0],
+            [0, 0, 1],
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, 1, 1],
+            [0.5, 0.5, 0],
+            [0.5, 0, 0.5],
+            [0, 0.5, 0.5],
+            [1, 0.5, 0.5],
+            [0.5, 1, 0.5],
+            [0.5, 0.5, 1],
+        ]) - 0.5) * self.cell_size + self.centre
+
+        lines = [
+            [0, 3],
+            [0, 5],
+            [0, 6],
+            [1, 2],
+            [1, 4],
+            [1, 7],
+            [2, 4],
+            [2, 7],
+            [3, 5],
+            [3, 6],
+            [4, 7],
+            [5, 6],
+            [8, 9],
+            [8, 10],
+            [8, 11],
+            [8, 12],
+            [9, 10],
+            [9, 11],
+            [10, 12],
+            [11, 12],
+            [13, 9],
+            [13, 10],
+            [13, 11],
+            [13, 12],
+        ]
+
+        self.unit_cell = Line(self.design_space, points[lines[0][0]], points[lines[0][1]], self.r)
+
+        for idx, line in enumerate(lines[1:]):
+            self.unit_cell += Line(self.design_space, points[line][0], points[line][1], self.r)
+
+        return self.unit_cell.evaluate_point(x, y, z)
+
+
+class BCCAxial(UnitCell):
+
+    def __init__(self, design_space, centre=None, r=0.25, cell_size=1):
+        super().__init__(design_space)
+
+        if centre is None:
+            centre = np.array([0, 0, 0])
+        self.centre = np.array(centre)
+        self.r = r
+        self.cell_size = cell_size
+
+        super().__init__(design_space)
+
+        self.x_limits = [self.centre[0] - self.cell_size / 2, self.centre[0] + self.cell_size / 2]
+        self.y_limits = [self.centre[1] - self.cell_size / 2, self.centre[1] + self.cell_size / 2]
+        self.z_limits = [self.centre[2] - self.cell_size / 2, self.centre[2] + self.cell_size / 2]
+
+        self.lines = []
+        self.unit_cell = None
+
+    def evaluate_point(self, x, y, z):
+
+        points = (np.array([
+            [0, 0, 0],
+            [1, 0, 0],
+            [0, 1, 0],
+            [1, 1, 0],
+            [0, 0, 1],
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, 1, 1]
+        ]) - 0.5) * self.cell_size + self.centre
+
+        lines = [
+            [0, 7],
+            [1, 6],
+            [2, 5],
+            [3, 4]
+        ]
+
+        self.unit_cell = Line(self.design_space, points[lines[0][0]], points[lines[0][1]], self.r)
+
+        for idx, line in enumerate(lines[1:]):
+            self.unit_cell += Line(self.design_space, points[line][0], points[line][1], self.r)
+
+        self.unit_cell += AxialCentric(self.design_space, self.centre, self.r, self.cell_size)
+
+        return self.unit_cell.evaluate_point(x, y, z)

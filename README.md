@@ -1,6 +1,8 @@
 # MetaStruct
 
-A Python project for open-source CAD design using implicit equations (or FREP, volumetric geometry). 
+A Python project for open-source CAD design using implicit equations (or FREP, volumetric geometry).
+
+This branch is for the development of code to import data about an optimised lattice structure. 
 
 # This Branch
 
@@ -24,7 +26,7 @@ Navigate into the root directory of the repository and pip install locally in de
 
 Use conda to install libigl python bindings:
 
-    conda install igl
+    conda install -c conda-forge igl
 
 There are a few quick ways to check if things are working (until proper tests are written...)
 
@@ -119,6 +121,25 @@ There are also some mathematical operators if required:
 2. Subtract
 3. Multiply
 4. Divide
+
+# Future Improvements
+
+There are lots of places where this project needs improvement! Here is a non-exhaustive list with some ideas:
+    
+1. Some documentation
+2. PEP stuff
+3. More speed, especially for the strut lattices
+4. Simpler dependencies (mayavi is useful, but possibly a bit heavy to list as a requirement..)
+5. More lattices & primitive shapes
+6. Faster / more efficient mesh to sdf conversion process (for importing stls)
+7. Better implicit mesher (dual contouring etc)
+8. Tests
+
+# Contributing
+
+Contributions to this project are very welcome! This started as a learning exercise, so there are plenty of examples of bad coding practice and things written to just work. I welcome all contributions from spell checking and variable renaming to more substantial changes in architecture, if these are beneficial!
+
+I would also really appreciate comments / explanations for how the proposed change works so that I can continue learning better Python and more advanced methods. 
 
 # About the Project
 

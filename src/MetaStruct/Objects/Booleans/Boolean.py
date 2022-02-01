@@ -18,7 +18,7 @@ class Boolean(Geometry):
 
         self.morph = 'Shape'
 
-        self.transform = np.eye(3)
+        self.transformation = np.eye(3)
 
         self.shape1 = shape1
         self.shape2 = shape2

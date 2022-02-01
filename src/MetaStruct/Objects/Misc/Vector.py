@@ -1,4 +1,5 @@
 import numexpr as ne
+import numpy as np
 
 
 class Vector:
@@ -10,32 +11,56 @@ class Vector:
 
     @property
     def magnitude(self):
-
-        return ne.evaluate('sqrt(x**2 + y**2 + z**2)', local_dict={'x': self.x,
-                                                                   'y': self.y,
-                                                                   'z': self.z})
+        x = self.x
+        y = self.y
+        z = self.z
+        return ne.evaluate('sqrt(x**2 + y**2 + z**2)')
 
     def __sub__(self, other):
         return subtract(self, other)
 
     def __mul__(self, other):
-        return multiplication(self, other)
+        return mult(self, other)
 
 
 def subtract(a, b):
+    ax = a.x
+    ay = a.y
+    az = a.z
+    bx = b.x
+    by = b.y
+    bz = b.z
+    if ax.ndim == 0 and bx.ndim == 0:
+        arrx = ax-bx
+    if ay.ndim == 0 and by.ndim == 0:
+        arry = ay-by
+    if az.ndim == 0 and bz.ndim == 0:
+        arrz = az-bz
 
-    array_x = ne.evaluate('a-b', local_dict={'a': a.x, 'b': b.x})
-    array_y = ne.re_evaluate(local_dict={'a': a.y, 'b': b.y})
-    array_z = ne.re_evaluate(local_dict={'a': a.z, 'b': b.z})
+    else:
 
-    return Vector([array_x, array_y, array_z])
+        arrx = np.empty(ax.shape, dtype=np.float32)
+        arry = np.empty(ay.shape, dtype=np.float32)
+        arrz = np.empty(az.shape, dtype=np.float32)
+        ne.evaluate('a-b', local_dict={'a': ax, 'b': bx}, out=arrx, casting='same_kind')
+        ne.evaluate('a-b', local_dict={'a': ay, 'b': by}, out=arry, casting='same_kind')
+        ne.evaluate('a-b', local_dict={'a': az, 'b': bz}, out=arrz, casting='same_kind')
+
+    return Vector([arrx, arry, arrz])
 
 
-def multiplication(a, b):
+def mult(a, b):
+    ax = a.x
+    ay = a.y
+    az = a.z
+    bx = b.x
+    by = b.y
+    bz = b.z
 
-    return ne.evaluate('(ax*bx)+(ay*by)+(az*bz)', local_dict={'ax': a.x,
-                                                              'bx': b.x,
-                                                              'ay': a.y,
-                                                              'by': b.y,
-                                                              'az': a.z,
-                                                              'bz': b.z})
+    if ax.ndim == 0 and bx.ndim == 0:
+        return (ax*bx)+(ay*by)+(az*bz)
+
+    else:
+        out = np.empty_like(ax, dtype=np.float32)
+        ne.evaluate('(ax*bx)+(ay*by)+(az*bz)', out=out, casting='same_kind')
+        return out
