@@ -1,7 +1,8 @@
 import numexpr as ne
 import numpy as np
 from numpy.linalg import norm
-from numba import njit
+from numba import njit, prange
+import time
 
 from MetaStruct.Objects.Misc.Vector import Vector
 from MetaStruct.Objects.Shapes.Shape import Shape
@@ -17,15 +18,65 @@ def numpy_norm(arr):
     return norm(arr, axis=0)
 
 
+@njit(fastmath=True, parallel=True)
+def numba_bah(ba, h):
+    out = np.empty((3, h.shape[0], h.shape[1], h.shape[2]), dtype=h.dtype)
+
+    for i in range(3):
+        for j in prange(h.shape[0]):
+            for k in range(h.shape[1]):
+                for l in range(h.shape[2]):
+                    out[i][j][k][l] = -ba[i] * h[j][k][l]
+
+    return out
+
+
+@njit(fastmath=True, parallel=True)
+def numba_norm(a, r):
+    norms = np.empty((a.shape[1], a.shape[2], a.shape[3]), dtype=a.dtype)
+    for i in prange(a.shape[1]):
+        for j in range(a.shape[2]):
+            for k in range(a.shape[3]):
+                norms[i][j][k] = np.sqrt(a[0][i][j][k] * a[0][i][j][k] + a[1][i][j][k] * a[1][i][j][k]
+                                         + a[2][i][j][k] * a[2][i][j][k]) - r
+    return norms
+
+
+@njit(fastmath=True, parallel=True)
+def numba_pa(x, y, z, p1):
+    x_ = x.shape[0]
+    y_ = y.shape[1]
+    z_ = z.shape[2]
+
+    pa = np.empty((3, x_, y_, z_), dtype=x.dtype)
+
+    for i in prange(3):
+        for j in range(x_):
+            for k in range(y_):
+                for l in range(z_):
+                    pa[i][j][0][0] = x[j][0][0] - p1[i]
+                    pa[i][0][k][0] = y[0][k][0] - p1[i]
+                    pa[i][0][0][l] = z[0][0][l] - p1[i]
+
+    return pa
+
+
+@njit(fastmath=True, parallel=True)
+def numba_div(paba, baba):
+
+    return paba / baba
+
+
 class Line(Shape):
 
     def __init__(self, design_space, p1=None, p2=None, r=0.015):
-        super().__init__(design_space, p1[0], p1[1], p1[2])
 
         if p1 is None:
             p1 = [0, 0, 0]
         if p2 is None:
             p2 = [1, 1, 1]
+
+        super().__init__(design_space, p1[0], p1[1], p1[2])
 
         self.p1 = Vector(p1)
         self.p1_ = np.array(p1)
@@ -38,7 +89,7 @@ class Line(Shape):
         self.z_limits = np.array(([min(p1[2], p2[2]) - r, max(p1[2], p2[2]) + r]), dtype=self.design_space.DATA_TYPE)
 
     @profile
-    def evaluate_point(self, x, y, z):
+    def evaluate_point_grids(self, x, y, z):
         pa = Vector([x, y, z]) - self.p1
         ba = self.p2 - self.p1
         bax = ba.x
@@ -51,22 +102,34 @@ class Line(Shape):
         bayh = ne.re_evaluate({'ba': bay, 'h': h})
         bazh = ne.re_evaluate({'ba': baz, 'h': h})
 
-        return np.linalg.norm(pa-Vector([baxh, bayh, bazh])) - self.r
+        return np.linalg.norm(pa - Vector([baxh, bayh, bazh])) - self.r
 
     @profile
-    def evaluate_point_bc(self, x_, y_, z_):
+    def evaluate_point(self, x, y, z):
+        t_s = time.time()
 
-        pa_x = x_ - self.p1_[0]
-        pa_y = y_ - self.p1_[1]
-        pa_z = z_ - self.p1_[2]
+        # TODO : Make this faster with Numba?
 
-        ba_ = self.p1_ - self.p2_
-        baba_ = np.dot(ba_, ba_)
+        pa = np.array([x, y, z], dtype=object) - self.p1_
 
-        paba_ = np.dot(np.array([pa_x, pa_y, pa_z], dtype=object), ba_)
+        ba_ = self.p2_ - self.p1_
 
-        return norm(np.einsum('i,jkl->ijkl', ba_, np.clip((paba_ / baba_), 0.0, 1.0), dtype=self.design_space.DATA_TYPE,
-                  casting='same_kind', optimize=True), axis=0) - self.r
+        ba_h = np.empty([3, self.design_space.resolution[0], self.design_space.resolution[1],
+                         self.design_space.resolution[2]])
+
+        clip = np.clip(np.dot(ba_, ba_) / np.dot(pa, ba_), 0.0, 1.0)
+
+        ba_h = numba_bah(ba_, clip)
+
+        ba_h[0] -= pa[0]
+        ba_h[1] -= pa[1]
+        ba_h[2] -= pa[2]
+
+        _norm = numba_norm(ba_h, self.r)
+
+        #print(time.time() - t_s)
+
+        return _norm
 
 
 class SimpleLine(Line):
@@ -94,20 +157,20 @@ class SimpleLine(Line):
         if self.ax == 'x':
             np.clip(x - self.centre[0], -self.length / 2, self.length / 2, out=clip)
 
-            return np.linalg.norm(np.array([x - self.centre[0] - clip, y - self.centre[1], z - self.centre[2]],
-                                           dtype=self.design_space.DATA_TYPE), axis=0) - self.r
+            return norm(np.array([x - self.centre[0] - clip, y - self.centre[1], z - self.centre[2]],
+                                 dtype=self.design_space.DATA_TYPE), axis=0) - self.r
 
         if self.ax == 'y':
             np.clip(y - self.centre[1], -self.length / 2, self.length / 2, out=clip)
 
-            return np.linalg.norm(np.array([x - self.centre[0], y - self.centre[1] - clip, z - self.centre[2]],
-                                           dtype=self.design_space.DATA_TYPE), axis=0) - self.r
+            return norm(np.array([x - self.centre[0], y - self.centre[1] - clip, z - self.centre[2]],
+                                 dtype=self.design_space.DATA_TYPE), axis=0) - self.r
 
         if self.ax == 'z':
             np.clip(z - self.centre[2], -self.length / 2, self.length / 2, out=clip)
 
-            return np.linalg.norm(np.array([x - self.centre[0], y - self.centre[1], z - self.centre[2] - clip],
-                                           dtype=self.design_space.DATA_TYPE), axis=0) - self.r
+            return norm(np.array([x - self.centre[0], y - self.centre[1], z - self.centre[2] - clip],
+                                 dtype=self.design_space.DATA_TYPE), axis=0) - self.r
 
 
 class LineZ(Line):
