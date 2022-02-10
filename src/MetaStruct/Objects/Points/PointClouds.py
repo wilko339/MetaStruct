@@ -8,17 +8,20 @@ from smt.sampling_methods import LHS, FullFactorial
 
 class PointCloud:
 
-    def __init__(self, n_points=None, shape=None, points=None, design_space=None,):
+    def __init__(self, n_points=None, shape=None, points=None, design_space=None):
         self.n_points = n_points
         self.points = points
 
         self.shape = shape
 
         self.design_space = design_space
-
-        self.x_scale = max(self.shape.x_limits) - min(self.shape.x_limits)
-        self.y_scale = max(self.shape.y_limits) - min(self.shape.y_limits)
-        self.z_scale = max(self.shape.z_limits) - min(self.shape.z_limits)
+        try:
+            self.x_scale = max(self.shape.x_limits) - min(self.shape.x_limits)
+            self.y_scale = max(self.shape.y_limits) - min(self.shape.y_limits)
+            self.z_scale = max(self.shape.z_limits) - min(self.shape.z_limits)
+        except AttributeError:
+            print(self.shape)
+            raise
 
     def generate_points(self, n_points):
         self.points[:, 0] = self.points[:, 0] * self.x_scale + min(self.shape.x_limits)
@@ -26,8 +29,7 @@ class PointCloud:
         self.points[:, 2] = self.points[:, 2] * self.z_scale + min(self.shape.z_limits)
 
         if self.shape is not None:
-            point_values = self.shape.evaluate_point(self.points[:, 0], self.points[:, 1], self.points[:, 2],
-                                                     broadcasting=False)
+            point_values = self.shape.evaluate_point(self.points[:, 0], self.points[:, 1], self.points[:, 2])
             mask = np.ma.masked_array(point_values <= 0)
             self.points = self.points[mask, :]
 
@@ -61,7 +63,7 @@ class RandomPoints(PointCloud):
 class LHSPoints(PointCloud):
 
     def __init__(self, design_space=None, n_points=50, shape=None, points=None):
-        super().__init__(design_space, n_points, shape, points)
+        super().__init__(design_space=design_space, n_points=n_points, shape=shape, points=points)
         self.points = LHS(xlimits=np.array([[0, 1], [0, 1], [0, 1]]))(n_points)
         self.generate_points(self.n_points)
 
