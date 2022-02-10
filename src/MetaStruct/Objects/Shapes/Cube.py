@@ -10,7 +10,6 @@ class Cube(Cuboid):
 
         self.dim = dim
         self.round_r = round_r
-        ne.set_num_threads(ne.ncores)
 
     def __str__(self):
         return super().__str__() + f'\nCube Radius: {self.dim}'
