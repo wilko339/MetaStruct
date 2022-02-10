@@ -26,7 +26,7 @@ class StrutLattice(Shape):
         self.n_lines = len(self.lines)
 
         try:
-            if len(self.r) == 1:
+            if type(self.r) is float:
                 initial_line = Line(self.design_space, self.lines[0][0], self.lines[0][1], r=self.r)
             else:
                 initial_line = Line(self.design_space, self.lines[0][0], self.lines[0][1], r=self.r[0])
@@ -48,7 +48,7 @@ class StrutLattice(Shape):
 
     def new_grid(self, line, idx):
 
-        if len(self.r) == 1:
+        if type(self.r) is float:
             line = Line(self.design_space, line[0], line[1], r=self.r)
 
         else:
@@ -231,7 +231,7 @@ class DelaunayLattice(StrutLattice):
 class ConvexHullLattice(StrutLattice):
 
     def __init__(self, design_space, point_cloud=None, r=0.02):
-        super().__init__(design_space, r, point_cloud)
+        super().__init__(design_space=design_space, r=r, point_cloud=point_cloud)
 
         self.designSpace = design_space
         self.point_cloud = point_cloud
@@ -361,9 +361,9 @@ class RepeatingLattice(StrutLattice):
 
     def evaluate_point(self, x, y, z):
 
-        x = ne.evaluate('((x+0.5*p) % p)-0.5*p', local_dict={'x': x, 'p': self.period})
-        y = ne.re_evaluate(local_dict={'x': y, 'p': self.period})
-        z = ne.re_evaluate(local_dict={'x': z, 'p': self.period})
+        x = np.mod((x+0.5*self.period), self.period) - 0.5*self.period
+        y = np.mod((y+0.5*self.period), self.period) - 0.5*self.period
+        z = np.mod((z+0.5*self.period), self.period) - 0.5*self.period
 
         return self.unit_cell.evaluate_point(x, y, z)
 
