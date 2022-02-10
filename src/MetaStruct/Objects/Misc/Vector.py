@@ -5,6 +5,7 @@ import numpy as np
 class Vector:
 
     def __init__(self, p):
+        p = np.array(p)
         self.x = p[0]
         self.y = p[1]
         self.z = p[2]
@@ -30,6 +31,7 @@ def subtract(a, b):
     bx = b.x
     by = b.y
     bz = b.z
+
     if ax.ndim == 0 and bx.ndim == 0:
         arrx = ax-bx
     if ay.ndim == 0 and by.ndim == 0:
