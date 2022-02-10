@@ -274,8 +274,7 @@ class Geometry:
 
         self.x_grid = r.apply(x)
 
-        self.evaluated_grid = self.evaluate_point(
-            self.x_grid, self.y_grid, self.z_grid)
+        self.evaluated_grid = self.evaluate_point(self.x_grid, self.y_grid, self.z_grid)
 
     def pringle(self, pringle_factor=0.1):
 
