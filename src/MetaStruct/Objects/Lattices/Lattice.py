@@ -33,9 +33,9 @@ class Lattice(Geometry):
         self.ky = 2 * math.pi * (self.ny / self.ly)
         self.kz = 2 * math.pi * (self.nz / self.lz)
 
-        self.xLims = np.array([-self.lx, self.lx])
-        self.yLims = np.array([-self.ly, self.ly])
-        self.zLims = np.array([-self.lz, self.lz])
+        self.x_limits = np.array([-self.lx, self.lx])
+        self.y_limits = np.array([-self.ly, self.ly])
+        self.z_limits = np.array([-self.lz, self.lz])
 
     def __repr__(self):
 
