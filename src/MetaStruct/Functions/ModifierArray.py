@@ -7,7 +7,7 @@ def create_modifier_array(shape, min_val=0., max_val=1., dim='x', func=None):
 
     arr2D = np.linspace(min_val, max_val, res, dtype=np.dtype('f4'))
 
-    Y, Z, X = np.meshgrid(arr2D, arr2D, arr2D)
+    X, Y, Z = np.meshgrid(arr2D, arr2D, arr2D, indexing='ij')
 
     if dim == 'x':
 
