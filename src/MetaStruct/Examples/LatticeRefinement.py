@@ -1,9 +1,4 @@
-import math
-
-import numpy as np
-
 from MetaStruct.Objects.Lattices.Gyroid import Gyroid
-from MetaStruct.Objects.Shapes.Sphere import Sphere
 from MetaStruct.Objects.designspace import DesignSpace
 from MetaStruct.Objects.Shapes.Cuboid import Cuboid
 from MetaStruct.Functions.ModifierArray import create_modifier_array
