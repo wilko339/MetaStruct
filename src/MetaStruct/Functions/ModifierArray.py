@@ -5,9 +5,11 @@ def create_modifier_array(shape, min_val=0., max_val=1., dim='x', func=None):
 
     res = shape.design_space.resolution
 
-    arr2D = np.linspace(min_val, max_val, res, dtype=np.dtype('f4'))
+    _X = np.linspace(min_val, max_val, res[0], dtype=shape.design_space.DATA_TYPE)
+    _Y = np.linspace(min_val, max_val, res[1], dtype=shape.design_space.DATA_TYPE)
+    _Z = np.linspace(min_val, max_val, res[2], dtype=shape.design_space.DATA_TYPE)
 
-    Y, Z, X = np.meshgrid(arr2D, arr2D, arr2D)
+    X, Y, Z = np.meshgrid(_X, _Y, _Z, indexing='ij')
 
     if dim == 'x':
 
