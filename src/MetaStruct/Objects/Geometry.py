@@ -283,3 +283,48 @@ class Geometry:
         self.design_space.Z += pringle_factor * (self.design_space.X**2 - self.design_space.Y**2)
 
         self.evaluated_grid = self.evaluate_point(self.design_space.X, self.design_space.Y, self.design_space.Z)
+
+    @profile
+    def transform(self, matrix=None):
+
+        rot = np.radians(10)
+
+        if matrix is None:
+            matrix = np.array([[np.cos(rot), -np.sin(rot), 0], [np.sin(rot), np.cos(rot), 0], [0, 0, 1]])
+
+        x = self.design_space.X
+        y = self.design_space.Y
+        z = self.design_space.Z
+
+        points = np.dot(np.linalg.inv(matrix), np.array([x, y, z], dtype=object))
+
+        self.evaluated_grid = self.evaluate_point_grid(points[0], points[1], points[2])
+
+    @profile
+    def vector_rotation(self, target=None, original=None):
+
+        if target is None:
+            target = np.array([1, 1, 1])
+
+        if original is None:
+            original = np.array([0, 0, 1])
+
+        target_norm = np.linalg.norm(target)
+        original_norm = np.linalg.norm(original)
+
+        if target_norm != 0:
+            target = target / target_norm
+        if original_norm != 0:
+            original = original / original_norm
+
+        v = np.cross(original, target)
+
+        s = np.linalg.norm(v)
+
+        c = np.dot(original, target)
+
+        vx = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+
+        r = np.eye(3) + vx + np.dot(vx, vx) * (1 - c) / s ** 2
+
+        self.transform(r)
