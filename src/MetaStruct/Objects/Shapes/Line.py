@@ -26,7 +26,7 @@ def numba_bah(ba, h):
         for j in prange(h.shape[0]):
             for k in range(h.shape[1]):
                 for l in range(h.shape[2]):
-                    out[i][j][k][l] = -ba[i] * h[j][k][l]
+                    out[i][j][k][l] = ba[i] * h[j][k][l]
 
     return out
 
@@ -61,12 +61,6 @@ def numba_pa(x, y, z, p1):
     return pa
 
 
-@njit(fastmath=True, parallel=True)
-def numba_div(paba, baba):
-
-    return paba / baba
-
-
 class Line(Shape):
 
     def __init__(self, design_space, p1=None, p2=None, r=0.015):
@@ -89,7 +83,8 @@ class Line(Shape):
         self.z_limits = np.array(([min(p1[2], p2[2]) - r, max(p1[2], p2[2]) + r]), dtype=self.design_space.DATA_TYPE)
 
     @profile
-    def evaluate_point_grids(self, x, y, z):
+    def evaluate_point_grid(self, x, y, z):
+        ts = time.time()
         pa = Vector([x, y, z]) - self.p1
         ba = self.p2 - self.p1
         bax = ba.x
@@ -102,13 +97,15 @@ class Line(Shape):
         bayh = ne.re_evaluate({'ba': bay, 'h': h})
         bazh = ne.re_evaluate({'ba': baz, 'h': h})
 
-        return np.linalg.norm(pa - Vector([baxh, bayh, bazh])) - self.r
+        norm = np.linalg.norm(pa - Vector([baxh, bayh, bazh])) - self.r
+
+        print(time.time()-ts)
+
+        return norm
 
     @profile
     def evaluate_point(self, x, y, z):
         t_s = time.time()
-
-        # TODO : Make this faster with Numba?
 
         pa = np.array([x, y, z], dtype=object) - self.p1_
 
@@ -117,7 +114,7 @@ class Line(Shape):
         ba_h = np.empty([3, self.design_space.resolution[0], self.design_space.resolution[1],
                          self.design_space.resolution[2]])
 
-        clip = np.clip(np.dot(ba_, ba_) / np.dot(pa, ba_), 0.0, 1.0)
+        clip = np.clip(np.dot(pa, ba_) / np.dot(ba_, ba_), 0.0, 1.0)
 
         ba_h = numba_bah(ba_, clip)
 
@@ -127,7 +124,7 @@ class Line(Shape):
 
         _norm = numba_norm(ba_h, self.r)
 
-        #print(time.time() - t_s)
+        print(time.time() - t_s)
 
         return _norm
 
