@@ -26,6 +26,8 @@ def lattice_modification_example():
     # Assign the new properties to the lattice
     lattice.vf = volume_fraction
     lattice.lx = unit_cell_size
+    lattice.ly = unit_cell_size
+    lattice.lz = unit_cell_size
 
     # Perform a boolean intersection to create the final shape
     shape = cuboid / lattice
