@@ -6,31 +6,33 @@ from MetaStruct.Objects.Lattices.Gyroid import Gyroid
 from MetaStruct.Objects.Shapes.Sphere import Sphere
 from MetaStruct.Objects.designspace import DesignSpace
 from MetaStruct.Objects.Shapes.Cuboid import Cuboid
+from MetaStruct.Functions.ModifierArray import create_modifier_array
 
 
-def latticeRefinementExample():
+def lattice_modification_example():
 
-    ds = DesignSpace(resolution=300, x_bounds=[-2, 2], y_bounds=[-2,2], z_bounds=[-0.5, 0.5])
+    # Initialise the design space. Use a reasonable resolution to capture all detail
+    # while being fast enough
+    ds = DesignSpace(resolution=300, x_bounds=[-2, 2], y_bounds=[-2, 2], z_bounds=[-1, 1])
 
-    cuboid = Cuboid(ds, xd=2, yd=2, zd=0.5)
+    # Initialise the Cuboid and Lattice objects
+    cuboid = Cuboid(ds, xd=2, yd=2, zd=1)
+    lattice = Gyroid(ds, vf=0.4)
 
-    refinedLattice = Gyroid(ds, ny=math.pi/3, nz=2, vf=0.4)
+    # Create the fields to vary the lattice parameters
+    volume_fraction = create_modifier_array(lattice, 0.3, 0.6)
+    unit_cell_size = create_modifier_array(lattice, 0.5, 1)
 
-    refinedLattice.convert_to_cylindrical()
+    # Assign the new properties to the lattice
+    lattice.vf = volume_fraction
+    lattice.lx = unit_cell_size
 
-    sphere = Sphere(ds, r=1.5)
+    # Perform a boolean intersection to create the final shape
+    shape = cuboid / lattice
 
-    sphere.evaluate_grid()
-
-    sphere.evaluated_grid = np.where(
-        sphere.evaluated_grid > 0, 0, sphere.evaluated_grid)
-
-    refinedLattice.evaluated_grid -= sphere.evaluated_grid / 10
-
-    shape = cuboid / refinedLattice
-
+    # Preview the model
     shape.preview_model()
 
 if __name__ == "__main__":
 
-    latticeRefinementExample()
+    lattice_modification_example()
