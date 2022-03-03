@@ -31,3 +31,24 @@ class Diamond(Lattice):
             shape.z_grid = self.z_grid
 
         return lattice.evaluate_point(x, y, z)
+
+    def evaluate_point_grid(self, x, y, z):
+        """Returns the function value at point (x, y, z)."""
+
+        vf = self.vf
+
+        vfHigh = ne.evaluate('0.5 + vf/2')
+        vfLow = ne.evaluate('0.5 - vf/2')
+
+        lattice = DiamondSurface(self.design_space, self.x, self.y, self.z, self.nx,
+                                 self.ny, self.nz, self.lx, self.ly, self.lz, vfHigh) - \
+            DiamondSurface(self.design_space, self.x, self.y, self.z, self.nx, self.ny,
+                           self.nz, self.lx, self.ly, self.lz, vfLow)
+
+        for shape in lattice.shapes:
+
+            shape.x_grid = self.x_grid
+            shape.y_grid = self.y_grid
+            shape.z_grid = self.z_grid
+
+        return lattice.evaluate_point_grid(x, y, z)

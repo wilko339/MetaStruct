@@ -367,10 +367,37 @@ class RepeatingLattice(StrutLattice):
 
         return self.unit_cell.evaluate_point(x, y, z)
 
+    def evaluate_point_grid(self, x, y, z):
+
+        x = ne.evaluate('((x+0.5*p) % p)-0.5*p', local_dict={'x': x, 'p': self.period})
+        y = ne.re_evaluate(local_dict={'x': y, 'p': self.period})
+        z = ne.re_evaluate(local_dict={'x': z, 'p': self.period})
+
+        return self.unit_cell.evaluate_point_grid(x, y, z)
+
 
 class UnitCell(Shape):
     def __init__(self, design_space):
         super().__init__(design_space)
+        self.unit_cell = None
+
+    def evaluate_point(self, x, y, z):
+
+        self.unit_cell = Line(self.design_space, self.points[self.lines[0][0]], self.points[self.lines[0][1]], self.r)
+
+        for idx, line in enumerate(self.lines[1:]):
+            self.unit_cell += Line(self.design_space, self.points[line][0], self.points[line][1], self.r)
+
+        return self.unit_cell.evaluate_point(x, y, z)
+
+    def evaluate_point_grid(self, x, y, z):
+
+        self.unit_cell = Line(self.design_space, self.points[self.lines[0][0]], self.points[self.lines[0][1]], self.r)
+
+        for idx, line in enumerate(self.lines[1:]):
+            self.unit_cell += Line(self.design_space, self.points[line][0], self.points[line][1], self.r)
+
+        return self.unit_cell.evaluate_point_grid(x, y, z)
 
 
 class AxialCentric(UnitCell):
@@ -417,8 +444,7 @@ class OctetTruss(UnitCell):
         self.lines = []
         self.unit_cell = None
 
-    def evaluate_point(self, x, y, z):
-        points = (np.array([
+        self.points = (np.array([
             [0, 0, 0],
             [1, 0, 0],
             [0, 1, 0],
@@ -435,7 +461,7 @@ class OctetTruss(UnitCell):
             [0.5, 0.5, 1],
         ]) - 0.5) * self.cell_size + self.centre
 
-        lines = [
+        self.lines = [
             [0, 3],
             [0, 5],
             [0, 6],
@@ -462,14 +488,6 @@ class OctetTruss(UnitCell):
             [13, 12],
         ]
 
-        self.unit_cell = Line(self.design_space, points[lines[0][0]], points[lines[0][1]], self.r)
-
-        for idx, line in enumerate(lines[1:]):
-            self.unit_cell += Line(self.design_space, points[line][0], points[line][1], self.r)
-
-        return self.unit_cell.evaluate_point(x, y, z)
-
-
 class BCCAxial(UnitCell):
 
     def __init__(self, design_space, centre=None, r=0.25, cell_size=1):
@@ -490,9 +508,7 @@ class BCCAxial(UnitCell):
         self.lines = []
         self.unit_cell = None
 
-    def evaluate_point(self, x, y, z):
-
-        points = (np.array([
+        self.points = (np.array([
             [0, 0, 0],
             [1, 0, 0],
             [0, 1, 0],
@@ -503,18 +519,91 @@ class BCCAxial(UnitCell):
             [1, 1, 1]
         ]) - 0.5) * self.cell_size + self.centre
 
-        lines = [
+        self.lines = [
             [0, 7],
             [1, 6],
             [2, 5],
             [3, 4]
         ]
 
-        self.unit_cell = Line(self.design_space, points[lines[0][0]], points[lines[0][1]], self.r)
 
-        for idx, line in enumerate(lines[1:]):
-            self.unit_cell += Line(self.design_space, points[line][0], points[line][1], self.r)
+class RhombicDodecahedron(UnitCell):
 
-        self.unit_cell += AxialCentric(self.design_space, self.centre, self.r, self.cell_size)
+    def __init__(self, design_space, centre=None, r=0.25, cell_size=1):
+        super().__init__(design_space)
 
-        return self.unit_cell.evaluate_point(x, y, z)
+        if centre is None:
+            centre = np.array([0, 0, 0])
+        self.centre = np.array(centre)
+        self.r = r
+        self.cell_size = cell_size
+
+        super().__init__(design_space)
+
+        self.x_limits = [self.centre[0] - self.cell_size / 2, self.centre[0] + self.cell_size / 2]
+        self.y_limits = [self.centre[1] - self.cell_size / 2, self.centre[1] + self.cell_size / 2]
+        self.z_limits = [self.centre[2] - self.cell_size / 2, self.centre[2] + self.cell_size / 2]
+
+        self.lines = []
+        self.unit_cell = None
+
+        self.points = (np.array([
+            [0, 0, 0],
+            [1, 0, 0],
+            [0, 1, 0],
+            [1, 1, 0],
+            [0, 0, 1],
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, 1, 1],
+            [0.5, 0.5, 0],
+            [0.5, 0, 0.5],
+            [0, 0.5, 0.5],
+            [1, 0.5, 0.5],
+            [0.5, 1, 0.5],
+            [0.5, 0.5, 1],
+            [0.25, 0.25, 0.25],
+            [0.75, 0.25, 0.25],
+            [0.25, 0.75, 0.25],
+            [0.75, 0.75, 0.25],
+            [0.25, 0.25, 0.75],
+            [0.75, 0.25, 0.75],
+            [0.25, 0.75, 0.75],
+            [0.75, 0.75, 0.75]
+        ]) - 0.5) * self.cell_size + self.centre
+
+        self.lines = [
+            [0, 14],
+            [1, 15],
+            [2, 16],
+            [3, 17],
+            [4, 18],
+            [5, 19],
+            [6, 20],
+            [7, 21],
+            [8, 14],
+            [8, 15],
+            [8, 16],
+            [8, 17],
+            [9, 14],
+            [9, 15],
+            [9, 18],
+            [9, 19],
+            [10, 14],
+            [10, 16],
+            [10, 18],
+            [10, 20],
+            [11, 15],
+            [11, 17],
+            [11, 19],
+            [11, 21],
+            [12, 16],
+            [12, 17],
+            [12, 20],
+            [12, 21],
+            [13, 18],
+            [13, 19],
+            [13, 20],
+            [13, 21],
+        ]
+

@@ -20,3 +20,24 @@ class GyroidSurface(Lattice):
         return np.sin(self.kx * (x - self.x)) * np.cos(self.ky * (y - self.y)) + \
                np.sin(self.ky * (y - self.y)) * np.cos(self.kz * (z - self.z)) + \
                np.sin(self.kz * (z - self.z)) * np.cos(self.kx * (x - self.x)) - t
+
+    def evaluate_point_grid(self, x, y, z):
+        """Returns the function value at point (x, y, z)."""
+
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+        kx = self.kx
+        ky = self.ky
+        kz = self.kz
+        vf = self.vf
+
+        t = ne.evaluate('(vf-0.501)/0.3325')
+
+        expr = 'sin(kx*(x-x0))*cos(ky*(y-y0)) + \
+                sin(ky * (y - y0)) * cos(kz * (z - z0)) + \
+                sin(kz*(z-z0))*cos(kx*(x-x0)) - t '
+
+        ne.set_num_threads(ne.ncores)
+
+        return ne.evaluate(expr)

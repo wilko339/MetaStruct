@@ -13,9 +13,6 @@ class Boolean(Geometry):
 
         super().__init__(shape1.design_space)
 
-        if shape1.morph == 'Lattice' and shape2.morph != 'Lattice':
-            raise TypeError('Please enter Lattice Object as 2nd Argument.')
-
         self.morph = 'Shape'
 
         self.transformation = np.eye(3)
@@ -123,6 +120,13 @@ class Boolean(Geometry):
 
         return ne.evaluate(self.expression)
 
+    def evaluate_point_grid(self, x, y, z):
+
+        g1 = self.shape1.evaluate_point_grid(x, y, z)
+        g2 = self.shape2.evaluate_point_grid(x, y, z)
+
+        return ne.evaluate(self.expression)
+
 
 class Union(Boolean):
 
@@ -158,6 +162,19 @@ class Blend(Boolean):
         super().__init__(shape1, shape2)
         self.blend = blend
         self.expression = 'b * g1 + (1 - b) * g2'
+
+    def evaluate_grid(self):
+
+        for shape in self.shapes:
+
+            if shape.evaluated_grid is None:
+                shape.evaluate_grid()
+
+        g1 = self.shape1.evaluated_grid
+        g2 = self.shape2.evaluated_grid
+        b = self.blend
+
+        self.evaluated_grid = ne.evaluate(self.expression)
 
 
 class Divide(Boolean):

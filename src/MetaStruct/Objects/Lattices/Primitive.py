@@ -17,3 +17,13 @@ class Primitive(Lattice):
                              self.nz, self.lx, self.ly, self.lz, self.vf)
 
         return lattice.evaluate_point(x, y, z)
+
+    def evaluate_point_grid(self, x, y, z):
+        """Returns the function value at point (x, y, z)."""
+
+        lattice = PrimitiveSurface(self.design_space, self.x, self.y, self.z, self.nx,
+                                   self.ny, self.nz, self.lx, self.ly, self.lz, -self.vf) - \
+            PrimitiveSurface(self.design_space, self.x, self.y, self.z, self.nx, self.ny,
+                             self.nz, self.lx, self.ly, self.lz, self.vf)
+
+        return lattice.evaluate_point_grid(x, y, z)

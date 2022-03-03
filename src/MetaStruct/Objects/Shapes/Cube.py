@@ -1,4 +1,5 @@
 import numpy as np
+import numexpr as ne
 
 from MetaStruct.Objects.Shapes.Cuboid import Cuboid
 
@@ -25,3 +26,35 @@ class Cube(Cuboid):
         z_max = np.maximum(z_abs, 0)
 
         return np.sqrt(x_max**2 + y_max**2 + z_max**2) + np.minimum(np.maximum(x_abs, np.maximum(y_abs, z_abs)), 0)
+
+    def ne_max(self, a, b):
+        return ne.evaluate('where(a>b, a, b)')
+
+    def ne_min(self, a, b):
+        return ne.evaluate('where(a<b, a, b)')
+
+    def evaluate_point_grid(self, x, y, z):
+        x0 = self.x
+        y0 = self.y
+        z0 = self.z
+
+        dim = self.dim
+        round_r = self.round_r
+
+        scale = dim / (dim + round_r)
+
+        x_abs = ne.evaluate('abs((x-x0)/scale)-dim', casting='same_kind')
+        y_abs = ne.re_evaluate({'x': y, 'x0': y0, 'scale': scale, 'dim': dim})
+        z_abs = ne.re_evaluate({'x': z, 'x0': z0, 'scale': scale, 'dim': dim})
+
+        x_max = ne.evaluate('where(x_abs>0.0, x_abs, 0.0)')
+        y_max = ne.re_evaluate(local_dict={'x_abs': y_abs})
+        z_max = ne.re_evaluate(local_dict={'x_abs': z_abs})
+
+        mag = ne.evaluate(
+            'sqrt(((where(x_abs>0.0, x_abs, 0.0))**2+((where(y_abs>0.0, y_abs, 0.0))**2+((where(z_abs>0.0, z_abs, 0.0))**2))))')
+
+        minmax = self.ne_min(self.ne_max(
+            x_abs, self.ne_max(y_abs, z_abs)), 0.0)
+
+        return ne.evaluate('(mag + minmax - round_r)*scale')
