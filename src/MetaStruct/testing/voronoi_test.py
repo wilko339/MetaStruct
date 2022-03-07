@@ -6,7 +6,7 @@ from MetaStruct.Objects.Points.PointClouds import RandomPoints, LHSPoints
 from MetaStruct.Objects.Lattices.StrutLattice import *
 from MetaStruct.Objects.Booleans.Boolean import *
 
-s
+
 def voro_test():
     ds = DesignSpace(300)
     region = Sphere(ds)
