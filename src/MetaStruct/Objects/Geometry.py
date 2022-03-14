@@ -1,9 +1,11 @@
 import igl
-import numexpr as ne
 import numpy as np
+import skimage.measure
 from scipy.spatial.transform import Rotation as R
 from skimage import measure
 from line_profiler_pycharm import profile
+import matplotlib.pyplot as plt
+import skfmm
 
 from MetaStruct.Functions.Remap import remap
 
@@ -36,6 +38,7 @@ class Geometry:
         self.x_limits = self.y_limits = self.z_limits = None
         self.evaluated_grid = self.evaluated_distance = None
         self.filename = None
+        self.projection = None
 
     def compare_limits(self):
 
@@ -328,3 +331,39 @@ class Geometry:
         r = np.eye(3) + vx + np.dot(vx, vx) * (1 - c) / s ** 2
 
         self.transform(r)
+
+    def project_z(self):
+
+        if self.evaluated_grid is None:
+
+            self.evaluate_grid()
+
+        self.projection = skfmm.distance(np.amin(self.evaluated_grid, 2),
+                                         [self.design_space.x_step, self.design_space.y_step])
+
+    def preview_projection(self):
+
+        if self.projection is None:
+
+            self.project_z()
+
+        fix, ax = plt.subplots()
+
+        ax.imshow(self.projection)
+
+        contours = skimage.measure.find_contours(self.projection, 0)
+
+        for contour in contours:
+
+            ax.plot(contour[:, 1], contour[:, 0], color='b')
+
+        plt.show()
+
+    def extrude_projection(self, h=0.5):
+
+        if self.projection is None:
+
+            self.project_z()
+
+        return np.maximum(self.projection[:, :, None] + 0 * self.design_space.Z, np.abs(self.design_space.Z) - h)
+
