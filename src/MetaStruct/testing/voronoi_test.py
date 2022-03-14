@@ -8,13 +8,13 @@ from MetaStruct.Objects.Booleans.Boolean import *
 
 
 def voro_test():
-    ds = DesignSpace(300)
+    ds = DesignSpace(200)
     region = Sphere(ds)
 
-    points = LHSPoints(ds, 50, shape=region)
+    points = LHSPoints(ds, 100, shape=region)
 
-    lat = DelaunayLattice(ds, point_cloud=points, r=0.03) / region
-    lat += VoronoiLattice(ds, point_cloud=points, r=0.03) / region
+    #lat = DelaunayLattice(ds, point_cloud=points, r=0.03) / region
+    lat = VoronoiLattice(ds, point_cloud=points, r=0.03) / region
 
     lat.preview_model()
 
