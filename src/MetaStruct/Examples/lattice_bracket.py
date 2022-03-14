@@ -18,6 +18,8 @@ def lattice_bracket(filepath='Engine_Bracket.stl'):
     # Intialise the imported shape object
     shape = ImportedMesh(ds, filepath)
 
+    shape.preview_model()
+
     # Intersect the shape with a lattice or other shape of choice.
     shape /= Gyroid(ds, lx=15, ly=15, lz=15)
 
