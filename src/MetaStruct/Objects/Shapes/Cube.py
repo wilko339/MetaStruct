@@ -12,20 +12,22 @@ class Cube(Cuboid):
         self.dim = dim
         self.round_r = round_r
 
+        self.scale = self.dim / (self.dim + self.round_r)
+
     def __str__(self):
         return super().__str__() + f'\nCube Radius: {self.dim}'
 
     def evaluate_point(self, x, y, z):
-
-        x_abs = np.abs(x) - self.dim
-        y_abs = np.abs(y) - self.dim
-        z_abs = np.abs(z) - self.dim
+        x_abs = np.abs(x - self.x) / self.scale - self.dim
+        y_abs = np.abs(y - self.y) / self.scale - self.dim
+        z_abs = np.abs(z - self.z) / self.scale - self.dim
 
         x_max = np.maximum(x_abs, 0)
         y_max = np.maximum(y_abs, 0)
         z_max = np.maximum(z_abs, 0)
 
-        return np.sqrt(x_max**2 + y_max**2 + z_max**2) + np.minimum(np.maximum(x_abs, np.maximum(y_abs, z_abs)), 0)
+        return (np.sqrt(x_max ** 2 + y_max ** 2 + z_max ** 2) + np.minimum(np.maximum(x_abs, np.maximum(y_abs, z_abs)),
+                                                                           0) - self.round_r) * self.scale
 
     def ne_max(self, a, b):
         return ne.evaluate('where(a>b, a, b)')
