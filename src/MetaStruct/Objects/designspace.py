@@ -3,7 +3,7 @@ import numpy as np
 
 class DesignSpace:
     DATA_TYPE = np.float32
-    OFFSET = 0.1
+    OFFSET = 0
 
     def __init__(self, resolution=None, x_bounds=None, y_bounds=None, z_bounds=None, create_grids=False):
         if resolution is None:
