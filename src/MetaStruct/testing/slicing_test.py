@@ -30,6 +30,8 @@ def main():
 
     shape = Cube(sp) / Gyroid(sp)
 
+    shape.preview_model()
+
     infill = GyroidSurface(sp, lx=0.1, ly=0.1, lz=0.2)
 
     shape.evaluate_grid()
@@ -39,17 +41,19 @@ def main():
 
         try:
 
-            # hatching_ = skfmm.distance(infill.evaluated_grid[:, :, z], [sp.x_step, sp.y_step])
+            hatching_ = skfmm.distance(infill.evaluated_grid[:, :, z], [sp.x_step, sp.y_step])
             # hatching_ = skfmm.distance(hatch(sp)[:, :, z], [sp.x_step, sp.y_step])
 
             distances = skfmm.distance(shape.evaluated_grid[:, :, z], [sp.x_step, sp.y_step])
 
-            hatching_ = hatch(sp)[:, :, z]
+            #hatching_ = hatch(sp)[:, :, z]
 
-            hatching = np.maximum(hatching_, shape.evaluated_grid[:, :, z])
+            hatching = np.maximum(hatching_, distances+0.03)
 
             outer = find_contours(distances, 0)
             outer_1 = find_contours(distances, -0.02)
+
+            infill_hatch = find_contours(hatching, 0)
 
             levels = np.linspace(0, 0.5, 5)
 
@@ -61,10 +65,8 @@ def main():
             for contour in outer_1:
                 ax.plot(contour[:, 1], contour[:, 0], linewidth=1, color='r')
 
-            for level in levels:
-                hatching_ = find_contours(hatching, -level)
-                for contour in hatching_:
-                    #ax.plot(contour[:, 1], contour[:, 0], linewidth=1, color='g')
+            for contour in infill_hatch:
+                ax.plot(contour[:, 1], contour[:, 0], linewidth=1, color='g')
 
             plt.show()
 
