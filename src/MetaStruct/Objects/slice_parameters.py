@@ -25,22 +25,32 @@ class SliceParameters(DesignSpace):
             z_bounds = [-1.1, 1.1]
 
         if layer_t is None:
-            layer_t = 0.05
+            layer_t = 0.1
 
-        z_resolution = (z_bounds[1] - z_bounds[0]) / layer_t
+        self.layer_t = layer_t
 
-        if type(z_resolution) is not int:
+        self.z_resolution = (z_bounds[1] - z_bounds[0]) / layer_t
+
+        print(self.z_resolution)
+
+        if not self.z_resolution.is_integer():
+
             print("Warning: Object not divisible into integer number of layers with current layer thickness /"
                   ", modifying z height.")
 
-            z_resolution = math.ceil(z_resolution)
-            z_bounds[1] = z_bounds[0] + layer_t * z_resolution
+            self.z_resolution = math.ceil(self.z_resolution)
 
-        print(z_resolution)
+            z_bounds[1] = z_bounds[0] + layer_t * self.z_resolution
 
-        resolution = xy_resolution.append(z_resolution)
+        self.z_resolution = int(self.z_resolution)
+
+        self.xy_resolution = xy_resolution
+
+        print(z_bounds)
+
+        resolution = [xy_resolution[0], xy_resolution[1], self.z_resolution+1]
 
         print(resolution)
 
-        super().__init__(xy_resolution, x_bounds, y_bounds, z_bounds)
+        super().__init__(resolution, x_bounds, y_bounds, z_bounds)
 
