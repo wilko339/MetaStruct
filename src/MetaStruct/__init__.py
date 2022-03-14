@@ -25,6 +25,4 @@ from .Objects.Points.PointClouds import *
 from .Functions.ModifierArray import create_modifier_array
 from .Functions.Remap import remap
 
-from MetaStruct.testing.convex_hull_test import convex_test
-
 from .Examples.LatticeSphere import latticed_sphere_example
