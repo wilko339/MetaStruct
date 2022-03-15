@@ -361,11 +361,19 @@ class RepeatingLattice(StrutLattice):
 
     def evaluate_point(self, x, y, z):
 
-        x = np.mod((x+0.5*self.period), self.period) - 0.5*self.period
-        y = np.mod((y+0.5*self.period), self.period) - 0.5*self.period
-        z = np.mod((z+0.5*self.period), self.period) - 0.5*self.period
+        if self.unit_cell.centre is [0, 0, 0]:
 
-        return self.unit_cell.evaluate_point(x, y, z)
+            x = np.mod((x+0.5*self.period), self.period) - 0.5*self.period
+            y = np.mod((y+0.5*self.period), self.period) - 0.5*self.period
+            z = np.mod((z+0.5*self.period), self.period) - 0.5*self.period
+
+            return self.unit_cell.evaluate_point(x, y, z)
+
+        else:
+
+            self.translate(self.unit_cell.centre)
+
+            return self.evaluated_grid
 
     def evaluate_point_grid(self, x, y, z):
 
@@ -459,7 +467,7 @@ class OctetTruss(UnitCell):
             [1, 0.5, 0.5],
             [0.5, 1, 0.5],
             [0.5, 0.5, 1],
-        ]) - 0.5) * self.cell_size + self.centre
+        ]) - 0.5) * self.cell_size
 
         self.lines = [
             [0, 3],
@@ -517,7 +525,7 @@ class BCCAxial(UnitCell):
             [1, 0, 1],
             [0, 1, 1],
             [1, 1, 1]
-        ]) - 0.5) * self.cell_size + self.centre
+        ]) - 0.5) * self.cell_size
 
         self.lines = [
             [0, 7],
@@ -570,7 +578,7 @@ class RhombicDodecahedron(UnitCell):
             [0.75, 0.25, 0.75],
             [0.25, 0.75, 0.75],
             [0.75, 0.75, 0.75]
-        ]) - 0.5) * self.cell_size + self.centre
+        ]) - 0.5) * self.cell_size
 
         self.lines = [
             [0, 14],
