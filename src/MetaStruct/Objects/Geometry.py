@@ -6,11 +6,14 @@ from skimage import measure
 from line_profiler_pycharm import profile
 import matplotlib.pyplot as plt
 import skfmm
+import time
 
 from MetaStruct.Functions.Remap import remap
 
 
 class Geometry:
+
+    MASK_VALUE = 1
 
     def __init__(self, design_space):
 
@@ -87,24 +90,55 @@ class Geometry:
 
         self.evaluated_grid = self.evaluate_point(self.design_space.X, self.design_space.Y, self.design_space.Z)
 
-    def find_surface(self, level=0):
+    def find_surface(self, level=0, mask=True):
+        """
+        Executes the marching cubes algorithm to generate the surface mesh for preview or export.
+
+        level : the surface level to extract
+        mask : whether to use a mask array to speed up the marching cubes algorithm
+        """
 
         print(f'Extracting Isosurface (level = {level})...')
 
         if self.evaluated_grid is None:
             self.evaluate_grid()
 
-        try:
+        if mask is True:
 
-            self.vertices, self.faces, self.normals, self.values = measure.marching_cubes(self.evaluated_grid, level=level,
-                                                                                          spacing=(
-                                                                                           self.x_step, self.y_step,
-                                                                                           self.z_step),
-                                                                                          allow_degenerate=False)
+            t_s = time.time()
 
-        except ValueError:
-            print(f'No isosurface found at specified level ({level})')
-            raise
+            mask = np.ma.masked_inside(self.evaluated_grid, -self.MASK_VALUE, self.MASK_VALUE).mask
+
+            print(f"Mask Time : {time.time()-t_s}")
+
+            try:
+
+                self.vertices, self.faces, self.normals, self.values = measure.marching_cubes(self.evaluated_grid, level=level,
+                                                                                              spacing=(
+                                                                                               self.x_step, self.y_step,
+                                                                                               self.z_step),
+                                                                                              allow_degenerate=False,
+                                                                                              mask=mask)
+
+            except ValueError:
+                print(f'No isosurface found at specified level ({level})')
+                raise
+
+        if mask is False:
+
+            try:
+
+                self.vertices, self.faces, self.normals, self.values = measure.marching_cubes(self.evaluated_grid,
+                                                                                              level=level,
+                                                                                              spacing=(
+                                                                                                  self.x_step,
+                                                                                                  self.y_step,
+                                                                                                  self.z_step),
+                                                                                              allow_degenerate=False)
+
+            except ValueError:
+                print(f'No isosurface found at specified level ({level})')
+                raise
 
     def preview_model(self, clip=None, clip_value=0, flip_clip=False, mode='surface', level=0, rgb=(22, 94, 111)):
 
@@ -293,13 +327,37 @@ class Geometry:
         rot = np.radians(10)
 
         if matrix is None:
-            matrix = np.array([[np.cos(rot), -np.sin(rot), 0], [np.sin(rot), np.cos(rot), 0], [0, 0, 1]])
+            matrix = np.array([
+                [np.cos(rot), -np.sin(rot), 0],
+                [np.sin(rot), np.cos(rot), 0],
+                [0, 0, 1]
+            ])
 
         x = self.design_space.X
         y = self.design_space.Y
         z = self.design_space.Z
 
         points = np.dot(np.linalg.inv(matrix), np.array([x, y, z], dtype=object))
+
+        self.evaluated_grid = self.evaluate_point_grid(points[0], points[1], points[2])
+
+    def translate(self, translation=None):
+
+        if translation is None:
+            translation = [0.5, 0, 0]
+
+        matrix = np.array([
+            [1, 0, 0, translation[0]],
+            [0, 1, 0, translation[1]],
+            [0, 0, 1, translation[2]],
+            [0, 0, 0, 1]
+        ])
+
+        x = self.design_space.X
+        y = self.design_space.Y
+        z = self.design_space.Z
+
+        points = np.dot(matrix, np.array([x, y, z, 1], dtype=object))
 
         self.evaluated_grid = self.evaluate_point_grid(points[0], points[1], points[2])
 
