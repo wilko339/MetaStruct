@@ -17,6 +17,12 @@ Clone the code into a local folder:
 Navigate into the root directory of the repository and pip install locally in dev mode using:
     
     pip install -e .
+    
+For some people, there may be some issues with the installation of the smt dependency. If this occurs, the package can be preinstalled using conda:
+
+    conda install -c conda-forge smt
+    
+Then, try to install the package again with the pip install command.
 
 Use conda to install libigl python bindings:
 
